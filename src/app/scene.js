@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Tree, TreePreset } from '@dgreenheck/ez-tree';
 import { Environment } from './environment';
-import { loadPresetWithTextures } from './textures';
+import { loadPresetWithTextures, preloadTreeTextures } from './textures';
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -18,6 +18,7 @@ function paintUI() {
  * @returns 
  */
 export async function createScene(renderer) {
+  await preloadTreeTextures();
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x94b9f8, 0.0015);
 
@@ -72,7 +73,7 @@ export async function createScene(renderer) {
     t.position.set(r * Math.cos(theta), 0, r * Math.sin(theta));
     loadPresetWithTextures(t, presets[index], false);
     t.options.seed = 10000 * Math.random();
-    t.generateLODs();
+    t.generateLODs(Tree.defaultLODLevels, renderer);
     t.castShadow = true;
     t.receiveShadow = true;
 

@@ -42,16 +42,32 @@ Any time the tree parameters are changed, you must call `generate()` to regenera
 
 ## Levels of Detail (LODs)
 
-For scenes with many trees, `generateLODs()` builds the tree at multiple levels of detail hosted in a `THREE.LOD` object inside the tree group. The renderer automatically switches levels based on camera distance. All levels are meshed from the same skeleton, so the tree's silhouette stays consistent across switches — distant levels just use fewer ring segments and fewer (but larger) leaves.
+For scenes with many trees, `generateLODs()` builds the tree at multiple levels of detail hosted in a `THREE.LOD` object inside the tree group. The renderer automatically switches levels based on camera distance. All levels derive from the same skeleton. Mesh levels simplify branches and foliage; the last level uses a baked whole-tree impostor.
 
 ```js
 const tree = new Tree();
 tree.loadPreset('Ash Medium');
-tree.generateLODs(); // instead of generate()
+tree.generateLODs(Tree.defaultLODLevels, renderer); // instead of generate()
 scene.add(tree);
 ```
 
-The default levels (`Tree.defaultLODLevels`) switch at 100 and 250 units, reducing to roughly 40% and 20% of the full triangle count. You can pass custom levels:
+The default levels (`Tree.defaultLODLevels`) are:
+
+| Level | Distance | Tree triangles |
+| --- | ---: | --- |
+| LOD0 | 0 | Full detail |
+| LOD1 | 100 | Approximately 40% |
+| LOD2 | 250 | Approximately 20% |
+| LOD3 | 400 | Budget of 1,400 (bundled presets: 1,028–1,400) |
+| LOD4 | 700 | 4: two crossed, double-sided impostor cards |
+
+LOD3 keeps thick branches with triangular cross-sections and distributes enlarged leaf cards across the canopy. `triangleBudget` overrides the other meshing controls. Very sparse custom trees can fall below 800 triangles; small presets whose LOD2 already falls below 800 can have a larger LOD3. The budget excludes the optional trellis support mesh, which remains separate.
+
+LOD4 bakes front and side views into a 1024×512 RGBA atlas. It is static (no wind), uses an unlit alpha-cutout material, and remains visible from side angles without camera-facing shaders. Its atlas/material export with the GLB. It is intended for distant, roughly ground-level views, not overhead views.
+
+**Wait for source textures to finish loading before baking LOD4.** The demo preloads its selectable textures. Baking requires a browser canvas and WebGL; pass your renderer to reuse its context. If omitted, a shared offscreen renderer is created lazily. Headless geometry-only callers can use `Tree.defaultLODLevels.slice(0, 4)` to exclude the impostor. Existing LOD0–2 geometry settings are unchanged; default generation and ZIP export now include five levels.
+
+You can pass custom levels:
 
 ```js
 tree.generateLODs([
@@ -70,9 +86,23 @@ tree.generateLODs([
 ]);
 ```
 
-All LOD levels share one bark material and one leaf material, so `tree.update(time)` animates wind at every level. Calling `generate()` afterwards tears the LOD down and restores the single full-detail mesh pair (note that exporting a tree generated with `generateLODs()` to GLB will include every level).
+LOD0–3 share one bark material and one leaf material, so `tree.update(time)` animates their wind. LOD4 owns a static atlas/material. Calling `generate()` afterwards tears the LOD down and restores the single full-detail mesh pair (note that exporting a tree generated with `generateLODs()` to GLB will include every level).
 
-If you have your own LOD or instancing system, `tree.createGeometry(detail)` returns raw `{ branches, leaves }` `BufferGeometry` pairs at any detail level without touching the tree's own meshes.
+If you have your own LOD or instancing system, `tree.createGeometry(detail, renderer?)` returns raw `{ branches, leaves }` geometry without touching the tree's own meshes. For `{ impostor: true }`, it also returns **`leavesMaterial`**, which must be used with the returned leaf geometry (branch geometry is empty). Dispose both geometries when done; disposing impostor leaf geometry also releases its owned atlas and material, never the source textures. Do not dispose it while clones still share it.
+
+`tree.applyDetail(detail, renderer?)` replaces the visible mesh pair and handles its material and disposal automatically, as used by the preview buttons. It tears down any automatic LOD group. `generate()` restores full detail.
+
+### LOD checks
+
+```sh
+npm run build:lib
+node tests/lod.test.mjs
+# Browser/WebGL + GLB round-trip checks (serve the repository root):
+npx vite --host 127.0.0.1 --port 5199
+# Open http://127.0.0.1:5199/tests/lod.browser.html; expect PASS.
+```
+
+The browser check uses a synthetic alpha-cutout leaf texture so it also works before Git LFS texture assets have been downloaded.
 
 # Running Standalone App Locally
 

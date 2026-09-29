@@ -27,6 +27,7 @@ export const LeafType = {
 const textureLoader = new THREE.TextureLoader();
 const barkCache = new Map();
 const leafCache = new Map();
+const pendingTextures = [];
 
 // The onError callbacks below matter: a texture whose file is missing keeps
 // an undefined image forever (the dev server masks the 404 by serving
@@ -34,13 +35,17 @@ const leafCache = new Map();
 // load must remove the map from the cache entirely.
 
 function loadColor(url, onError) {
-  const t = textureLoader.load(url, undefined, undefined, onError);
+  let done;
+  pendingTextures.push(new Promise((resolve) => { done = resolve; }));
+  const t = textureLoader.load(url, done, undefined, (error) => { onError(error); done(); });
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
 
 function loadLinear(url, onError) {
-  return textureLoader.load(url, undefined, undefined, onError);
+  let done;
+  pendingTextures.push(new Promise((resolve) => { done = resolve; }));
+  return textureLoader.load(url, done, undefined, (error) => { onError(error); done(); });
 }
 
 /**
@@ -114,4 +119,12 @@ export function loadPresetWithTextures(tree, name, generate = true) {
   if (generate) {
     tree.generate();
   }
+}
+
+/** Finish loading selectable textures before any permanent impostor bake. */
+export async function preloadTreeTextures() {
+  Object.values(BarkType).forEach(getBarkMaps);
+  Object.values(LeafType).forEach(getLeafMap);
+  await Promise.all(pendingTextures);
+  pendingTextures.length = 0;
 }

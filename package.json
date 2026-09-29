@@ -54,5 +54,7 @@
     "generation",
     "tree"
   ],
-  "dependencies": {}
+  "dependencies": {
+    "z-schema": "^12.4.6"
+  }
 }

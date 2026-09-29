@@ -577,12 +577,8 @@ export function setupUI(tree, environment, renderer, scene, camera, orbitControl
   function applyLODPreview() {
     const detail = Tree.defaultLODLevels[previewLevel]?.detail ?? {};
     const t0 = performance.now();
-    const { branches, leaves } = tree.createGeometry(detail);
+    tree.applyDetail(detail, renderer);
     lastBuildMs = performance.now() - t0;
-    tree.branchesMesh.geometry.dispose();
-    tree.branchesMesh.geometry = branches;
-    tree.leavesMesh.geometry.dispose();
-    tree.leavesMesh.geometry = leaves;
   }
 
   function setPreviewLevel(level) {
@@ -1188,6 +1184,8 @@ export function setupUI(tree, environment, renderer, scene, camera, orbitControl
   exportModelsSection.add(exportGlbBtn);
 
   const exportLodsBtn = createButton('Export LODs (ZIP)', 'archive', async ({ setStatus }) => {
+    const restoreLevel = previewLevel;
+    setPreviewLevel(0);
     const restoreTextures = stripBrokenTextures(tree);
     try {
       const files = {};
@@ -1196,16 +1194,17 @@ export function setupUI(tree, environment, renderer, scene, camera, orbitControl
         await paint();
 
         const { detail } = Tree.defaultLODLevels[i];
-        const { branches, leaves } = tree.createGeometry(detail ?? {});
+        const { branches, leaves, leavesMaterial } = tree.createGeometry(detail ?? {}, renderer);
 
         try {
           const branchesMesh = new THREE.Mesh(branches, tree.branchesMesh.material);
           branchesMesh.name = `Branches_LOD${i}`;
-          const leavesMesh = new THREE.Mesh(leaves, tree.leavesMesh.material);
+          const leavesMesh = new THREE.Mesh(leaves, leavesMaterial ?? tree.leavesMesh.material);
           leavesMesh.name = `Leaves_LOD${i}`;
           const group = new THREE.Group();
           group.name = `Tree_LOD${i}`;
-          group.add(branchesMesh, leavesMesh);
+          if (branches.attributes.position.count) group.add(branchesMesh);
+          if (leaves.attributes.position.count) group.add(leavesMesh);
 
           const glb = await new Promise((resolve, reject) =>
             exporter.parse(group, resolve, reject, { binary: true }),
@@ -1229,6 +1228,7 @@ export function setupUI(tree, environment, renderer, scene, camera, orbitControl
       console.error(err);
     } finally {
       restoreTextures();
+      setPreviewLevel(restoreLevel);
     }
   });
   exportModelsSection.add(exportLodsBtn);

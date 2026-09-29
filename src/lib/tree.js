@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import RNG from './rng';
+import { bakeImpostor } from './impostor';
 import { Branch } from './branch';
 import { Billboard, TreeType } from './enums';
 import TreeOptions from './options';
@@ -39,7 +40,7 @@ export class Tree extends THREE.Group {
   }
 
   update(elapsedTime) {
-    const leafShader = this.leavesMesh.material.userData.shader;
+    const leafShader = (this.lodMaterials?.[1] ?? this.leavesMesh.material).userData.shader;
     if (leafShader) {
       leafShader.uniforms.uTime.value = elapsedTime;
     }
@@ -72,6 +73,8 @@ export class Tree extends THREE.Group {
    * @property {number} [leafStride=1] Keep every Nth leaf
    * @property {number} [leafScale=1] Size multiplier for the kept leaves,
    *   typically 1/sqrt(kept fraction) to preserve canopy coverage
+   * @property {number} [triangleBudget] Budget for simplified branches and leaves
+   * @property {boolean} [impostor] Bake two crossed whole-tree cards (4 triangles)
    * @property {string} [billboard] Billboard mode override for this level
    *   ('single' or 'double'); defaults to options.leaves.billboard
    */
@@ -85,7 +88,7 @@ export class Tree extends THREE.Group {
 
   /**
    * Default levels for generateLODs(). LOD1 is roughly 40% of the full
-   * triangle count, LOD2 roughly 20%.
+   * triangle count, LOD2 roughly 20%, LOD3 at most 1400 triangles, LOD4 4.
    * @type {LODLevel[]}
    */
   static defaultLODLevels = [
@@ -118,6 +121,8 @@ export class Tree extends THREE.Group {
         billboard: Billboard.Single,
       },
     },
+    { distance: 400, hysteresis: 0.05, detail: { triangleBudget: 1400 } },
+    { distance: 700, hysteresis: 0.05, detail: { impostor: true } },
   ];
 
   /**
@@ -139,11 +144,13 @@ export class Tree extends THREE.Group {
   /**
    * Generates the tree as a set of levels of detail hosted in a THREE.LOD
    * object inside this group. The renderer switches levels automatically
-   * based on camera distance. All levels share one bark and one leaf
-   * material, so update() animates wind at every level.
+   * based on camera distance. Mesh levels share bark/leaf materials and wind;
+   * impostors have a static baked atlas. Wait for source textures to load first.
    * @param {LODLevel[]} levels Level descriptors, in any order
+   * @param {THREE.WebGLRenderer} [renderer] Renderer used for impostor baking
    */
-  generateLODs(levels = Tree.defaultLODLevels) {
+  generateLODs(levels = Tree.defaultLODLevels, renderer = undefined) {
+    if (!levels.length) throw new RangeError('At least one LOD level is required');
     this.#clearLOD();
     this.#generateSkeleton();
 
@@ -159,15 +166,24 @@ export class Tree extends THREE.Group {
       (a, b) => (a.distance ?? 0) - (b.distance ?? 0),
     );
 
+    this.lodMaterials = [barkMaterial, leafMaterial];
     ordered.forEach((level, index) => {
-      const buffers = this.#meshSkeleton(level.detail ?? {});
-
+      let product;
+      if (level.detail?.impostor) {
+        product = this.createGeometry(level.detail, renderer);
+      } else {
+        const buffers = this.#meshSkeleton(level.detail ?? {});
+        if (index === 0) {
+          this.branches = buffers.branches;
+          this.leaves = buffers.leaves;
+        }
+        product = {
+          branches: this.#buildBufferGeometry(buffers.branches),
+          leaves: this.#buildBufferGeometry(buffers.leaves),
+        };
+      }
       let branchesMesh, leavesMesh;
       if (index === 0) {
-        // Reuse the existing meshes for the closest level so update(),
-        // traversal and the vertex/triangle count getters keep working.
-        this.branches = buffers.branches;
-        this.leaves = buffers.leaves;
         branchesMesh = this.branchesMesh;
         leavesMesh = this.leavesMesh;
         branchesMesh.geometry.dispose();
@@ -175,20 +191,17 @@ export class Tree extends THREE.Group {
         leavesMesh.geometry.dispose();
         leavesMesh.material.dispose();
       } else {
-        branchesMesh = new THREE.Mesh();
-        leavesMesh = new THREE.Mesh();
+        branchesMesh = new THREE.Mesh(product.branches, barkMaterial);
+        leavesMesh = new THREE.Mesh(product.leaves, product.leavesMaterial ?? leafMaterial);
       }
-
-      branchesMesh.geometry = this.#buildBufferGeometry(buffers.branches);
+      branchesMesh.geometry = product.branches;
       branchesMesh.material = barkMaterial;
-      leavesMesh.geometry = this.#buildBufferGeometry(buffers.leaves);
-      leavesMesh.material = leafMaterial;
-
+      leavesMesh.geometry = product.leaves;
+      leavesMesh.material = product.leavesMaterial ?? leafMaterial;
       for (const mesh of [branchesMesh, leavesMesh]) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
       }
-
       const group = new THREE.Group();
       group.add(branchesMesh, leavesMesh);
       this.lod.addLevel(group, level.distance ?? 0, level.hysteresis ?? 0);
@@ -204,17 +217,47 @@ export class Tree extends THREE.Group {
    * custom LOD systems. Reuses the current skeleton, generating one first
    * if none exists.
    * @param {LODDetail} detail
-   * @returns {{ branches: THREE.BufferGeometry, leaves: THREE.BufferGeometry }}
+   * @param {THREE.WebGLRenderer} [renderer] Optional renderer for impostor baking
+   * @returns {{ branches: THREE.BufferGeometry, leaves: THREE.BufferGeometry, leavesMaterial?: THREE.Material }}
+   * Impostors include a required leavesMaterial. Disposing leaves also disposes
+   * this owned material and its atlas. Source textures are never disposed.
    */
-  createGeometry(detail = {}) {
+  createGeometry(detail = {}, renderer = undefined) {
     if (!this.skeleton) {
       this.#generateSkeleton();
+    }
+    if (detail.impostor) {
+      const source = this.createGeometry();
+      const bark = this.#createBarkMaterial();
+      const leaf = this.#createLeafMaterial();
+      try {
+        return bakeImpostor(source, bark, leaf, renderer);
+      } finally {
+        source.branches.dispose();
+        source.leaves.dispose();
+        bark.dispose();
+        leaf.dispose();
+      }
     }
     const buffers = this.#meshSkeleton(detail);
     return {
       branches: this.#buildBufferGeometry(buffers.branches),
       leaves: this.#buildBufferGeometry(buffers.leaves),
     };
+  }
+
+  /** Replace the visible mesh pair, including the material needed by an impostor. */
+  applyDetail(detail = {}, renderer = undefined) {
+    const product = this.createGeometry(detail, renderer);
+    this.#clearLOD();
+    this.branchesMesh.geometry.dispose();
+    this.leavesMesh.geometry.dispose();
+    this.leavesMesh.material.dispose();
+    this.branchesMesh.material.dispose();
+    this.branchesMesh.material = this.#createBarkMaterial();
+    this.branchesMesh.geometry = product.branches;
+    this.leavesMesh.geometry = product.leaves;
+    this.leavesMesh.material = product.leavesMaterial ?? this.#createLeafMaterial();
   }
 
   /**
@@ -233,6 +276,8 @@ export class Tree extends THREE.Group {
       }
     });
 
+    this.lodMaterials?.forEach((material) => material.dispose());
+    this.lodMaterials = null;
     this.remove(this.lod);
     this.lod = null;
     this.add(this.branchesMesh, this.leavesMesh);
@@ -277,6 +322,9 @@ export class Tree extends THREE.Group {
    * @param {LODDetail} detail
    */
   #meshSkeleton(detail = {}) {
+    if (detail.triangleBudget !== undefined) {
+      return this.#meshBudget(detail.triangleBudget);
+    }
     const sectionStride = Math.max(1, Math.floor(detail.sectionStride ?? 1));
     const segmentFactor = detail.segmentFactor ?? 1;
     const leafStride = Math.max(1, Math.floor(detail.leafStride ?? 1));
@@ -306,6 +354,34 @@ export class Tree extends THREE.Group {
       this.#meshLeaf(leaves, this.skeleton.leaves[i], leafScale, billboard);
     }
 
+    return { branches, leaves };
+  }
+
+  // Keep the thickest branches first and stratify foliage over the entire
+  // skeleton (not just its first branches). No RNG consumption or mutation.
+  #meshBudget(budget) {
+    if (!Number.isFinite(budget) || budget < 12) {
+      throw new RangeError('triangleBudget must be finite and at least 12');
+    }
+    budget = Math.floor(budget);
+    const empty = () => ({ verts: [], normals: [], indices: [], uvs: [] });
+    const branches = empty();
+    const leaves = empty();
+    const leafCount = this.skeleton.leaves.length;
+    const branchBudget = leafCount ? Math.floor(budget * 0.4) : budget;
+    const ranked = [...this.skeleton.branches].sort((a, b) => b.baseRadius - a.baseRadius);
+    for (const branch of ranked) {
+      const stride = Math.max(1, Math.ceil((branch.sections.length - 1) / 3));
+      const triangles = Math.ceil((branch.sections.length - 1) / stride) * 6;
+      if (branches.indices.length / 3 + triangles > branchBudget) break;
+      this.#meshBranch(branches, branch, stride, 0);
+    }
+    const count = Math.min(leafCount, Math.floor((budget - branches.indices.length / 3) / 2));
+    const scale = count ? Math.min(3, Math.sqrt(2 * leafCount / count)) : 1;
+    for (let i = 0; i < count; i++) {
+      const index = Math.floor((i + 0.5) * leafCount / count);
+      this.#meshLeaf(leaves, this.skeleton.leaves[index], scale, Billboard.Single);
+    }
     return { branches, leaves };
   }
 
@@ -856,7 +932,12 @@ export class Tree extends THREE.Group {
       new THREE.BufferAttribute(new Float32Array(buffers.uvs), 2),
     );
     g.setIndex(
-      new THREE.BufferAttribute(new Uint16Array(buffers.indices), 1),
+      new THREE.BufferAttribute(
+        buffers.verts.length / 3 > 65535
+          ? new Uint32Array(buffers.indices)
+          : new Uint16Array(buffers.indices),
+        1,
+      ),
     );
     g.computeBoundingSphere();
     return g;
@@ -1194,10 +1275,10 @@ export class Tree extends THREE.Group {
   }
 
   get vertexCount() {
-    return (this.branches.verts.length + this.leaves.verts.length) / 3;
+    return this.branchesMesh.geometry.attributes.position.count + this.leavesMesh.geometry.attributes.position.count;
   }
 
   get triangleCount() {
-    return (this.branches.indices.length + this.leaves.indices.length) / 3;
+    return (this.branchesMesh.geometry.index.count + this.leavesMesh.geometry.index.count) / 3;
   }
 }

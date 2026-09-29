@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- Added default LOD3 at 400 units with a 1,400-triangle budget and LOD4 at 700 units with four triangles: crossed front/side impostor cards and a baked RGBA atlas.
+- Preview and per-LOD GLB ZIP export now support all five levels, including the impostor material. Source textures are preloaded before demo baking.
+- Added `triangleBudget` and `impostor` detail options, an optional renderer argument for baking, and `applyDetail()` for material-aware previews. Impostor geometry owns its atlas/material lifetime.
+- Default LOD generation now needs browser/WebGL support for LOD4; geometry-only callers can explicitly omit that level.
+- Added preset budget/reproducibility tests and browser baking, cleanup, and GLB round-trip checks.
+- Use 32-bit geometry indices when needed so high-detail trees used for baking do not wrap indices above 65,535 vertices.
+
 ## [2.0.0] - 2026-07-16
 
 ### Levels of Detail
