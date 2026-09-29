@@ -71,6 +71,10 @@ export class Tree extends THREE.Group {
    * @property {number} [segmentFactor=1] Radial segment multiplier;
    *   segments = max(3, round(segmentCount * segmentFactor))
    * @property {number} [leafStride=1] Keep every Nth leaf
+   * @property {number} [leafFraction=1] Keep this stratified fraction of
+   *   the (strided) leaves; allows non-integer thinning
+   * @property {number} [minBranchRadius=0] Skip skeleton branches whose base
+   *   radius (tree units) is below this
    * @property {number} [leafScale=1] Size multiplier for the kept leaves,
    *   typically 1/sqrt(kept fraction) to preserve canopy coverage
    * @property {number} [triangleBudget] Budget for simplified branches and leaves
@@ -297,22 +301,108 @@ export class Tree extends THREE.Group {
 
     this.rng = new RNG(this.options.seed);
 
-    // Create the trunk of the tree first
-    this.branchQueue.push(
-      new Branch(
-        new THREE.Vector3(),
-        new THREE.Euler(),
-        this.options.branch.length[0],
-        this.options.branch.radius[0],
-        0,
-        this.options.branch.sections[0],
-        this.options.branch.segments[0],
-      ),
-    );
+    // Create the trunk(s) of the tree first
+    for (const stem of this.#stems()) {
+      this.branchQueue.push(
+        new Branch(
+          new THREE.Vector3(),
+          stem.orientation,
+          stem.length,
+          stem.radius,
+          0,
+          this.options.branch.sections[0],
+          this.options.branch.segments[0],
+        ),
+      );
+    }
 
     while (this.branchQueue.length > 0) {
       const branch = this.branchQueue.shift();
       this.#growBranch(branch);
+    }
+  }
+
+  /**
+   * Trunk descriptors. One upright stem (identity orientation, no RNG) unless
+   * options.form asks for a lean or several stems.
+   * @returns {{orientation: THREE.Euler, length: number, radius: number}[]}
+   */
+  #stems() {
+    const form = this.options.form ?? {};
+    const length = this.options.branch.length[0];
+    const radius = this.options.branch.radius[0];
+    const stems = Math.max(1, Math.round(form.stems ?? 1));
+    const lean = THREE.MathUtils.degToRad(form.lean ?? 0);
+    const qLean = new THREE.Quaternion().setFromAxisAngle(
+      this.#leanAxis(), lean);
+    if (stems === 1) {
+      return [{ orientation: new THREE.Euler().setFromQuaternion(qLean), length, radius }];
+    }
+    const variance = form.stemVariance ?? 0;
+    const spread = THREE.MathUtils.degToRad(form.stemSpread ?? 0);
+    const offset = this.rng.random();
+    const result = [];
+    for (let k = 0; k < stems; k++) {
+      const azimuth = 2 * Math.PI * (offset + (k + this.rng.random(0.3, -0.3)) / stems);
+      const tilt = spread * (1 + this.rng.random(variance, -variance));
+      const axis = new THREE.Vector3(Math.cos(azimuth), 0, -Math.sin(azimuth));
+      const q = qLean.clone().multiply(new THREE.Quaternion().setFromAxisAngle(axis, tilt));
+      result.push({
+        orientation: new THREE.Euler().setFromQuaternion(q),
+        length: length * (1 + this.rng.random(variance, -variance)),
+        radius: radius * (form.stemRadius ?? 1),
+      });
+    }
+    return result;
+  }
+
+  /** Horizontal unit vector of options.form.leanDirection. */
+  #leanHorizontal() {
+    const a = THREE.MathUtils.degToRad(this.options.form?.leanDirection ?? 0);
+    return new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
+  }
+
+  /** Rotation axis that tips +Y toward the lean direction. */
+  #leanAxis() {
+    return new THREE.Vector3(0, 1, 0).cross(this.#leanHorizontal()).normalize();
+  }
+
+  /**
+   * Rotates a section's growth direction toward target by step radians,
+   * never past it (negative steps rotate away). No-op when aligned.
+   */
+  #steer(qSection, target, step) {
+    if (!step) return;
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(qSection);
+    const axis = new THREE.Vector3().crossVectors(up, target);
+    const sin = axis.length();
+    if (sin < 1e-6) return;
+    axis.divideScalar(sin);
+    const full = Math.atan2(sin, up.dot(target));
+    qSection.premultiply(new THREE.Quaternion().setFromAxisAngle(
+      axis, Math.max(-full, Math.min(full, step))));
+  }
+
+  /**
+   * Applies options.form and branch.droop steering to one section. All
+   * steps are total-per-branch values spread evenly over its sections.
+   */
+  #shapeSection(qSection, branch, origin) {
+    const form = this.options.form ?? {};
+    const n = Math.max(1, branch.sectionCount);
+    const droop = this.options.branch.droop?.[branch.level] ?? 0;
+    if (droop) this.#steer(qSection, new THREE.Vector3(0, -1, 0), droop / n);
+    if (branch.level === 0 && form.bend) {
+      this.#steer(qSection, this.#leanHorizontal(), THREE.MathUtils.degToRad(form.bend) / n);
+    }
+    if (branch.level > 0 && form.windswept) {
+      this.#steer(qSection, this.#leanHorizontal(), form.windswept / n);
+    }
+    if (branch.level > 0 && form.crownFlatten &&
+      origin.y > (form.crownStart ?? 0.7) * this.options.branch.length[0]) {
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(qSection);
+      up.y = 0;
+      if (up.lengthSq() > 1e-8) this.#steer(qSection, up.normalize(), form.crownFlatten / n);
     }
   }
 
@@ -346,12 +436,22 @@ export class Tree extends THREE.Group {
       uvs: [],
     };
 
+    const minRadius = detail.minBranchRadius ?? 0;
     for (const skeletonBranch of this.skeleton.branches) {
+      if (skeletonBranch.baseRadius < minRadius) continue;
       this.#meshBranch(branches, skeletonBranch, sectionStride, segmentFactor);
     }
 
+    const strided = [];
     for (let i = 0; i < this.skeleton.leaves.length; i += leafStride) {
-      this.#meshLeaf(leaves, this.skeleton.leaves[i], leafScale, billboard);
+      strided.push(this.skeleton.leaves[i]);
+    }
+    // Stratified subset so a fractional keep still covers the whole crown
+    const fraction = Math.min(1, Math.max(0, detail.leafFraction ?? 1));
+    const kept = fraction >= 1 ? strided.length : Math.round(strided.length * fraction);
+    for (let i = 0; i < kept; i++) {
+      const index = kept === strided.length ? i : Math.floor((i + 0.5) * strided.length / kept);
+      this.#meshLeaf(leaves, strided[index], leafScale, billboard);
     }
 
     return { branches, leaves };
@@ -431,6 +531,10 @@ export class Tree extends THREE.Group {
       sectionOrigin.add(
         new THREE.Vector3(0, sectionLength, 0).applyEuler(sectionOrientation),
       );
+      const floor = this.options.form?.floor;
+      if (floor !== null && floor !== undefined && sectionOrigin.y < floor) {
+        sectionOrigin.y = floor;
+      }
 
       // Perturb the orientation of the next section randomly. The higher the
       // gnarliness, the larger potential perturbation
@@ -485,6 +589,8 @@ export class Tree extends THREE.Group {
           qSection.rotateTowards(qTrellis, trellisResult.strength);
         }
       }
+
+      this.#shapeSection(qSection, branch, sectionOrigin);
 
       sectionOrientation.setFromQuaternion(qSection);
     }

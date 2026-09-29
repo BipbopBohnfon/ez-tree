@@ -122,6 +122,58 @@ export default class TreeOptions {
         2: 0,
         3: 0,
       },
+
+      // Gravitropism per branch level: total rotation (radians) toward
+      // straight down spread over the branch's length. Positive droops
+      // (weeping willow curtains, spruce boughs), negative curls upward.
+      // 0 keeps upstream behaviour.
+      droop: {
+        0: 0,
+        1: 0,
+        2: 0,
+        3: 0,
+      },
+    };
+
+    // Whole-tree form controls. Every default reproduces upstream growth
+    // exactly (no extra RNG draws, no steering).
+    this.form = {
+      // Initial trunk tilt from vertical (degrees)
+      lean: 0,
+
+      // Compass direction of lean, bend and windswept (degrees about +Y;
+      // 0 = +Z)
+      leanDirection: 0,
+
+      // Extra trunk curvature (degrees, total over the trunk) toward the
+      // lean direction. Negative bends the trunk back toward vertical.
+      bend: 0,
+
+      // Downwind flagging of every branch level >= 1 (radians, total over
+      // each branch) toward the horizontal lean direction
+      windswept: 0,
+
+      // Number of trunks rising from the base. >1 draws extra RNG.
+      stems: 1,
+
+      // Splay of each stem from vertical (degrees)
+      stemSpread: 25,
+
+      // Random +/- fraction applied to each stem's length and splay
+      stemVariance: 0.25,
+
+      // Radius multiplier applied to each stem when stems > 1
+      stemRadius: 0.7,
+
+      // Crown flattening: total rotation (radians per branch) toward the
+      // horizontal for branch sections above crownStart. Umbrella crowns.
+      crownFlatten: 0,
+
+      // Height above which crownFlatten acts, as a fraction of trunk length
+      crownStart: 0.7,
+
+      // Lowest allowed section height (tree units). null = unbounded.
+      floor: null,
     };
 
     // Leaf parameters

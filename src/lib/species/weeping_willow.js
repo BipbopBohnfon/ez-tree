@@ -1,0 +1,40 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'weeping_willow', name: 'Weeping Willow', biomes: ['lake_shore'],
+  height: [8, 14],
+  lods: [30, 70, 150, 400, 1500],
+  lastShadowLod: 1,
+  impostor: 'cross',
+  bark: { texture: 'Bark007', tint: 0x9c8a74, textureScale: { x: 1, y: 3 } },
+  leaves: {
+    paint: { shape: 'lanceolate', count: 16, length: 0.22, width: 0.26, branches: 4, spread: 25, droop: 0.15, colors: [[70, 0.45, 0.36], [85, 0.45, 0.46]], stem: { color: '#7d6a3a', width: 0.007 } },
+  },
+  swayRate: 0.35,
+  options: {
+    type: 'deciduous',
+    branch: {
+      levels: 3,
+      angle: { 1: 40, 2: 40, 3: 25 },
+      children: { 0: 7, 1: 6, 2: 3 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.002 },
+      gnarliness: { 0: 0.08, 1: 0.12, 2: 0.05, 3: 0.05 },
+      length: { 0: 14, 1: 18, 2: 16, 3: 7 },
+      radius: { 0: 2.6, 1: 0.55, 2: 0.45, 3: 0.6 },
+      sections: { 0: 8, 1: 7, 2: 6, 3: 3 },
+      segments: { 0: 10, 1: 6, 2: 3, 3: 3 },
+      start: { 1: 0.45, 2: 0.3, 3: 0.2 },
+      taper: { 0: 0.5, 1: 0.6, 2: 0.7, 3: 0.7 },
+      droop: { 1: 0.6, 2: 2.6, 3: 1.0 },
+    },
+    leaves: { billboard: 'double', angle: 15, count: 5, start: 0.1, size: 2.6, sizeVariance: 0.2, alphaTest: 0.5 },
+  },
+  vary: {
+    'branch.length.0': [10, 17],
+    'branch.length.1': [14, 22],
+    'branch.length.2': [13, 19],
+    'branch.children.0': [6, 9, 'int'],
+    'branch.droop.2': [2.0, 3.0],
+    'form.lean': [0, 10],
+    'form.leanDirection': [0, 360],
+  },
+};

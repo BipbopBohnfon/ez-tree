@@ -1,0 +1,41 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'maritime_pine', name: 'Maritime Pine', biomes: ['ocean_shore'],
+  height: [10, 20],
+  lods: [30, 70, 150, 400, 1500],
+  lastShadowLod: 1,
+  impostor: 'cross',
+  bark: { texture: 'Bark006', tint: 0xa07a62, textureScale: { x: 1, y: 3 } },
+  leaves: {
+    paint: { shape: 'needle', count: 12, length: 0.2, width: 0.35, spread: 28, branches: 6, colors: [[110, 0.3, 0.22], [125, 0.3, 0.32]], stem: { color: '#5a4030', width: 0.012 } },
+    roughness: 0.75,
+  },
+  options: {
+    type: 'deciduous',
+    branch: {
+      levels: 2,
+      angle: { 1: 60, 2: 45 },
+      children: { 0: 8, 1: 7 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.003 },
+      gnarliness: { 0: 0.04, 1: 0.12, 2: 0.15 },
+      length: { 0: 50, 1: 16, 2: 7 },
+      radius: { 0: 1.5, 1: 0.45, 2: 0.6 },
+      sections: { 0: 14, 1: 6, 2: 4 },
+      segments: { 0: 9, 1: 5, 2: 3 },
+      start: { 1: 0.72, 2: 0.25 },
+      taper: { 0: 0.75, 1: 0.6, 2: 0.7 },
+    },
+    form: { crownFlatten: 1.4, crownStart: 0.8 },
+    leaves: { billboard: 'double', angle: 30, count: 9, start: 0.2, size: 5.0, sizeVariance: 0.25, alphaTest: 0.5 },
+  },
+  vary: {
+    'branch.length.0': [42, 58],
+    'branch.length.1': [12, 20],
+    'branch.children.0': [6, 10, 'int'],
+    'branch.start.1': [0.65, 0.8],
+    'form.lean': [3, 16],
+    'form.leanDirection': [0, 360],
+    'form.bend': [0, 25],
+    'form.crownFlatten': [0.9, 1.8],
+  },
+};

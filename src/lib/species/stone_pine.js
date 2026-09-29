@@ -1,0 +1,43 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'stone_pine', name: 'Stone Pine', biomes: ['alpine'],
+  height: [4, 10],
+  lods: [25, 60, 130, 350, 1200],
+  lastShadowLod: 1,
+  impostor: 'cross',
+  bark: { texture: 'Bark004', tint: 0x9a8a7a, textureScale: { x: 1, y: 3 } },
+  leaves: {
+    paint: { shape: 'needle', count: 14, length: 0.15, width: 0.35, spread: 30, branches: 6, colors: [[130, 0.3, 0.18], [145, 0.28, 0.28]], stem: { color: '#4b3a2a', width: 0.012 } },
+    roughness: 0.75,
+  },
+  swayRate: 0.3,
+  options: {
+    type: 'deciduous',
+    branch: {
+      levels: 2,
+      angle: { 1: 70, 2: 45 },
+      children: { 0: 10, 1: 6 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.004 },
+      gnarliness: { 0: 0.12, 1: 0.2, 2: 0.2 },
+      length: { 0: 14, 1: 10, 2: 5 },
+      radius: { 0: 1.6, 1: 0.5, 2: 0.6 },
+      sections: { 0: 10, 1: 6, 2: 4 },
+      segments: { 0: 8, 1: 5, 2: 3 },
+      start: { 1: 0.25, 2: 0.2 },
+      taper: { 0: 0.6, 1: 0.6, 2: 0.7 },
+      droop: { 1: 0.3 },
+    },
+    form: { windswept: 0.9 },
+    leaves: { billboard: 'double', angle: 35, count: 7, start: 0.15, size: 3.6, sizeVariance: 0.25, alphaTest: 0.5 },
+  },
+  vary: {
+    'branch.length.0': [10, 18],
+    'branch.length.1': [8, 13],
+    'branch.children.0': [8, 12, 'int'],
+    'branch.gnarliness.1': [0.12, 0.3],
+    'form.lean': [4, 22],
+    'form.leanDirection': [0, 360],
+    'form.bend': [-18, 12],
+    'form.windswept': [0.4, 1.4],
+  },
+};

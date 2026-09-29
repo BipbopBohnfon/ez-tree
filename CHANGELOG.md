@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Game tree generator (Deinterleaver): `SPECIES` roster of ten species (`src/lib/species/`), `variantOptions()` giving ten stratified, deterministic variants per species, and `buildVariant()` returning metre-scaled, base-pivoted trees with a fitted LOD0–LOD4 chain (`GAME_LOD_TIERS`, LOD0 capped at 16k triangles).
+- New form options, all upstream-identical by default: per-level `branch.droop` (gravitropism) and `form.{lean, leanDirection, bend, windswept, stems, stemSpread, stemVariance, stemRadius, crownFlatten, crownStart, floor}`.
+- New LOD detail options `leafFraction` and `minBranchRadius`.
+- Impostors: `card` mode (one Y-billboard quad, pivot at base) beside `cross`; headless `impostorGeometry()`; `bakeSpeciesAtlas()` packs every variant's views into one power-of-two atlas with a normal/roughness companion and colour bled under transparency.
+- `paintLeaves()` / `leafTextures()`: procedural leaf-cluster textures (ovate, lanceolate, needle, pinnate, bipinnate) with a height-from-alpha normal map; `imageTexture()` with coverage-preserving alpha mips.
 - Added default LOD3 at 400 units with a 1,400-triangle budget and LOD4 at 700 units with four triangles: crossed front/side impostor cards and a baked RGBA atlas.
 - Preview and per-LOD GLB ZIP export now support all five levels, including the impostor material. Source textures are preloaded before demo baking.
 - Added `triangleBudget` and `impostor` detail options, an optional renderer argument for baking, and `applyDetail()` for material-aware previews. Impostor geometry owns its atlas/material lifetime.

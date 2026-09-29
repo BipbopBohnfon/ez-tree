@@ -1,0 +1,40 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'olive', name: 'Olive', biomes: ['scrub'],
+  height: [4, 8],
+  lods: [25, 60, 130, 350, 1200],
+  lastShadowLod: 1,
+  impostor: 'card',
+  bark: { texture: 'Bark013', tint: 0x9d9587, textureScale: { x: 1, y: 3 } },
+  leaves: {
+    paint: { shape: 'lanceolate', count: 12, length: 0.24, width: 0.3, spread: 45, branches: 5, colors: [[80, 0.14, 0.4], [95, 0.18, 0.55]], stem: { color: '#6a6250', width: 0.007 } },
+  },
+  options: {
+    type: 'deciduous',
+    branch: {
+      levels: 3,
+      angle: { 1: 45, 2: 45, 3: 40 },
+      children: { 0: 4, 1: 4, 2: 3 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.006 },
+      gnarliness: { 0: 0.2, 1: 0.25, 2: 0.2, 3: 0.12 },
+      length: { 0: 8, 1: 10, 2: 7, 3: 3 },
+      radius: { 0: 2.2, 1: 0.6, 2: 0.6, 3: 0.7 },
+      sections: { 0: 8, 1: 6, 2: 4, 3: 3 },
+      segments: { 0: 10, 1: 6, 2: 3, 3: 3 },
+      start: { 1: 0.5, 2: 0.25, 3: 0.1 },
+      taper: { 0: 0.5, 1: 0.6, 2: 0.7, 3: 0.7 },
+      twist: { 0: 0.15, 1: 0.1 },
+    },
+    form: { stems: 1, stemSpread: 22, stemRadius: 0.65 },
+    leaves: { billboard: 'double', angle: 35, count: 3, start: 0.2, size: 3.0, sizeVariance: 0.25, alphaTest: 0.5 },
+  },
+  vary: {
+    'branch.length.0': [6, 10],
+    'branch.length.1': [8, 12],
+    'branch.gnarliness.0': [0.12, 0.3],
+    'branch.twist.0': [-0.25, 0.25],
+    'form.stems': [1, 3.4, 'int'],
+    'form.lean': [0, 10],
+    'form.leanDirection': [0, 360],
+  },
+};

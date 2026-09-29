@@ -1,0 +1,40 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'silver_birch', name: 'Silver Birch', biomes: ['meadow', 'lake_shore'],
+  height: [10, 18],
+  lods: [30, 70, 150, 400, 1500],
+  lastShadowLod: 1,
+  impostor: 'card',
+  bark: { texture: 'Bark012', tint: 0xf2eee6, textureScale: { x: 1, y: 3 } },
+  leaves: {
+    paint: { shape: 'ovate', count: 8, length: 0.2, width: 0.7, spread: 60, branches: 3, droop: 0.3, colors: [[72, 0.5, 0.34], [90, 0.5, 0.44]], stem: { color: '#4a3526', width: 0.008 } },
+  },
+  swayRate: 0.3,
+  options: {
+    type: 'deciduous',
+    branch: {
+      levels: 3,
+      angle: { 1: 35, 2: 45, 3: 40 },
+      children: { 0: 10, 1: 4, 2: 3 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.004 },
+      gnarliness: { 0: 0.03, 1: 0.12, 2: 0.18, 3: 0.1 },
+      length: { 0: 40, 1: 12, 2: 7, 3: 3 },
+      radius: { 0: 0.9, 1: 0.55, 2: 0.6, 3: 0.7 },
+      sections: { 0: 12, 1: 6, 2: 4, 3: 3 },
+      segments: { 0: 8, 1: 5, 2: 3, 3: 3 },
+      start: { 1: 0.3, 2: 0.2, 3: 0.1 },
+      taper: { 0: 0.8, 1: 0.6, 2: 0.7, 3: 0.7 },
+      droop: { 2: 0.9, 3: 1.2 },
+    },
+    leaves: { billboard: 'double', angle: 25, count: 3, start: 0.1, size: 2.2, sizeVariance: 0.25, alphaTest: 0.5 },
+  },
+  vary: {
+    'branch.length.0': [34, 46],
+    'branch.length.1': [9, 15],
+    'branch.angle.1': [28, 45],
+    'branch.children.0': [8, 12, 'int'],
+    'branch.droop.2': [0.5, 1.3],
+    'form.lean': [0, 6],
+    'form.leanDirection': [0, 360],
+  },
+};

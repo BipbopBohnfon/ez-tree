@@ -1,0 +1,40 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'umbrella_acacia', name: 'Umbrella Acacia', biomes: ['dry_grass'],
+  height: [5, 10],
+  lods: [30, 70, 150, 400, 1500],
+  lastShadowLod: 1,
+  impostor: 'cross',
+  bark: { texture: 'Bark008', tint: 0x8c7a66, textureScale: { x: 1, y: 3 } },
+  leaves: {
+    paint: { shape: 'bipinnate', count: 6, length: 0.3, width: 0.45, spread: 60, branches: 3, colors: [[78, 0.35, 0.3], [92, 0.35, 0.4]], stem: { color: '#5b4632', width: 0.008 } },
+  },
+  swayRate: 0.3,
+  options: {
+    type: 'deciduous',
+    branch: {
+      levels: 3,
+      angle: { 1: 30, 2: 55, 3: 45 },
+      children: { 0: 4, 1: 5, 2: 4 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.0 },
+      gnarliness: { 0: 0.05, 1: 0.12, 2: 0.2, 3: 0.1 },
+      length: { 0: 9, 1: 13, 2: 8, 3: 3 },
+      radius: { 0: 1.5, 1: 0.6, 2: 0.55, 3: 0.7 },
+      sections: { 0: 6, 1: 6, 2: 4, 3: 3 },
+      segments: { 0: 8, 1: 5, 2: 3, 3: 3 },
+      start: { 1: 0.6, 2: 0.4, 3: 0.2 },
+      taper: { 0: 0.4, 1: 0.6, 2: 0.7, 3: 0.7 },
+    },
+    form: { crownFlatten: 2.2, crownStart: 1.2, stems: 1, stemSpread: 20 },
+    leaves: { billboard: 'double', angle: 60, count: 4, start: 0.3, size: 3.0, sizeVariance: 0.25, alphaTest: 0.5 },
+  },
+  vary: {
+    'branch.length.0': [7, 12],
+    'branch.length.1': [11, 16],
+    'branch.angle.1': [22, 38],
+    'form.stems': [1, 2.4, 'int'],
+    'form.crownFlatten': [1.6, 2.8],
+    'form.lean': [0, 8],
+    'form.leanDirection': [0, 360],
+  },
+};

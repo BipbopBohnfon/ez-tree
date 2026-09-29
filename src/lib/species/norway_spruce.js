@@ -1,0 +1,41 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'norway_spruce', name: 'Norway Spruce', biomes: ['forest', 'alpine'],
+  height: [15, 28],
+  lods: [30, 70, 150, 400, 1500],
+  lastShadowLod: 1,
+  impostor: 'card',
+  bark: { texture: 'Bark003', tint: 0x8a7563, textureScale: { x: 1, y: 4 } },
+  leaves: {
+    paint: { shape: 'needle', count: 22, length: 0.1, width: 0.35, spread: 60, branches: 6, colors: [[140, 0.35, 0.16], [150, 0.3, 0.24]], stem: { color: '#4b3a2a', width: 0.01 } },
+    roughness: 0.75,
+  },
+  swayRate: 0.2,
+  options: {
+    type: 'evergreen',
+    branch: {
+      levels: 1,
+      angle: { 1: 95 },
+      children: { 0: 90 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.0 },
+      gnarliness: { 0: 0.02, 1: 0.06 },
+      length: { 0: 60, 1: 22 },
+      radius: { 0: 1.4, 1: 0.3 },
+      sections: { 0: 12, 1: 5 },
+      segments: { 0: 8, 1: 3 },
+      start: { 1: 0.12 },
+      taper: { 0: 0.9, 1: 0.9 },
+      droop: { 1: 0.7 },
+    },
+    leaves: { billboard: 'double', angle: 40, count: 12, start: 0.05, size: 6, sizeVariance: 0.2, alphaTest: 0.5 },
+  },
+  vary: {
+    'branch.children.0': [80, 105, 'int'],
+    'branch.length.1': [18, 26],
+    'branch.angle.1': [88, 105],
+    'branch.droop.1': [0.4, 1.1],
+    'branch.start.1': [0.06, 0.2],
+    'form.lean': [0, 3],
+    'form.leanDirection': [0, 360],
+  },
+};

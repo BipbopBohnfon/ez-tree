@@ -1,0 +1,40 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'field_oak', name: 'Field Oak', biomes: ['meadow', 'forest'],
+  height: [10, 18],
+  lods: [30, 70, 150, 400, 1500],
+  lastShadowLod: 1,
+  impostor: 'cross',
+  bark: { texture: 'Bark001', tint: 0xb8a58c, textureScale: { x: 1, y: 4 } },
+  leaves: {
+    paint: { shape: 'ovate', count: 7, length: 0.3, width: 0.55, spread: 55, branches: 2, colors: [[88, 0.42, 0.24], [104, 0.46, 0.34]] },
+  },
+  options: {
+    type: 'deciduous',
+    branch: {
+      levels: 3,
+      angle: { 1: 55, 2: 45, 3: 35 },
+      children: { 0: 7, 1: 4, 2: 3 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.008 },
+      gnarliness: { 0: 0.06, 1: 0.18, 2: 0.2, 3: 0.12 },
+      length: { 0: 20, 1: 20, 2: 11, 3: 5 },
+      radius: { 0: 2.2, 1: 0.62, 2: 0.6, 3: 0.7 },
+      sections: { 0: 10, 1: 7, 2: 5, 3: 3 },
+      segments: { 0: 10, 1: 6, 2: 4, 3: 3 },
+      start: { 1: 0.35, 2: 0.2, 3: 0.1 },
+      taper: { 0: 0.6, 1: 0.55, 2: 0.65, 3: 0.7 },
+      droop: { 1: 0.25, 2: 0.2 },
+    },
+    leaves: { billboard: 'double', angle: 30, count: 4, start: 0.2, size: 3.2, sizeVariance: 0.3, alphaTest: 0.5 },
+  },
+  vary: {
+    'branch.length.0': [16, 24],
+    'branch.length.1': [16, 24],
+    'branch.angle.1': [45, 70],
+    'branch.children.0': [6, 9, 'int'],
+    'branch.gnarliness.1': [0.1, 0.28],
+    'form.lean': [0, 7],
+    'form.leanDirection': [0, 360],
+    'leaves.size': [2.8, 3.6],
+  },
+};

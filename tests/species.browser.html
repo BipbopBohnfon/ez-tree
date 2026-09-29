@@ -1,0 +1,10 @@
+<!doctype html>
+<html><head><style>
+body { margin: 0; background: #1d2126; color: #ddd; font: 12px monospace; }
+#result { position: absolute; top: 4px; left: 6px; margin: 0; z-index: 2; }
+#view { display: block; }
+#aux { display: flex; gap: 8px; padding: 6px; align-items: flex-start; }
+#aux canvas { background: repeating-conic-gradient(#555 0 25%, #777 0 50%) 0 0 / 16px 16px; }
+</style></head>
+<body><pre id="result">RUNNING</pre><canvas id="view"></canvas><div id="aux"></div>
+<script type="module" src="./species.browser.js"></script></body></html>

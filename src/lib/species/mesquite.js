@@ -1,0 +1,41 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'mesquite', name: 'Mesquite', biomes: ['desert'],
+  height: [3, 7],
+  lods: [25, 60, 130, 350, 1200],
+  lastShadowLod: 1,
+  impostor: 'cross',
+  bark: { texture: 'Bark015', tint: 0x7a6454, textureScale: { x: 1, y: 3 } },
+  leaves: {
+    paint: { shape: 'bipinnate', count: 5, length: 0.3, width: 0.45, spread: 55, branches: 3, colors: [[85, 0.3, 0.32], [100, 0.3, 0.42]], stem: { color: '#5a4030', width: 0.008 } },
+  },
+  swayRate: 0.3,
+  options: {
+    type: 'deciduous',
+    branch: {
+      levels: 3,
+      angle: { 1: 50, 2: 50, 3: 45 },
+      children: { 0: 3, 1: 3, 2: 3 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.003 },
+      gnarliness: { 0: 0.15, 1: 0.25, 2: 0.25, 3: 0.15 },
+      length: { 0: 9, 1: 9, 2: 6, 3: 2.5 },
+      radius: { 0: 1.2, 1: 0.6, 2: 0.6, 3: 0.7 },
+      sections: { 0: 7, 1: 6, 2: 4, 3: 3 },
+      segments: { 0: 7, 1: 5, 2: 3, 3: 3 },
+      start: { 1: 0.55, 2: 0.3, 3: 0.2 },
+      taper: { 0: 0.5, 1: 0.6, 2: 0.7, 3: 0.7 },
+      droop: { 2: 0.4, 3: 0.4 },
+    },
+    form: { stems: 4, stemSpread: 35, stemRadius: 0.7, stemVariance: 0.3 },
+    leaves: { billboard: 'double', angle: 40, count: 2, start: 0.5, size: 2.4, sizeVariance: 0.25, alphaTest: 0.5 },
+  },
+  vary: {
+    'form.stems': [2.6, 5.4, 'int'],
+    'form.stemSpread': [25, 45],
+    'branch.length.0': [7, 11],
+    'branch.length.1': [7, 11],
+    'branch.children.0': [2, 4, 'int'],
+    'form.lean': [0, 8],
+    'form.leanDirection': [0, 360],
+  },
+};
