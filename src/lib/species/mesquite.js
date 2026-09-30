@@ -10,6 +10,7 @@ export default {
     paint: { shape: 'bipinnate', count: 5, length: 0.3, width: 0.45, spread: 55, branches: 3, colors: [[85, 0.3, 0.32], [100, 0.3, 0.42]], stem: { color: '#5a4030', width: 0.008 } },
   },
   swayRate: 0.3,
+  stemThin: 0.6,
   options: {
     type: 'deciduous',
     branch: {
@@ -20,7 +21,7 @@ export default {
       gnarliness: { 0: 0.15, 1: 0.25, 2: 0.25, 3: 0.15 },
       length: { 0: 9, 1: 9, 2: 6, 3: 2.5 },
       radius: { 0: 1.2, 1: 0.6, 2: 0.6, 3: 0.7 },
-      sections: { 0: 7, 1: 6, 2: 4, 3: 3 },
+      sections: { 0: 7, 1: 6, 2: 4, 3: 2 },
       segments: { 0: 7, 1: 5, 2: 3, 3: 3 },
       start: { 1: 0.55, 2: 0.3, 3: 0.2 },
       taper: { 0: 0.5, 1: 0.6, 2: 0.7, 3: 0.7 },
@@ -34,7 +35,7 @@ export default {
     'form.stemSpread': [25, 45],
     'branch.length.0': [7, 11],
     'branch.length.1': [7, 11],
-    'branch.children.0': [2, 4, 'int'],
+    'branch.children.1': [2, 4, 'int'],
     'form.lean': [0, 8],
     'form.leanDirection': [0, 360],
   },

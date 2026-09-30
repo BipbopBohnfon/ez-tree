@@ -6,8 +6,9 @@ import {
 } from './impostor';
 import { getSpecies, speciesSets, speciesWind, variantMeta, variantOptions, VARIANT_COUNT } from './species/index';
 
-/** LOD0 triangle cap for the largest trees (spec: ≤ 16k). */
-export const LOD0_TRIANGLE_CAP = 16000;
+/** LOD0 triangle cap for the largest trees (spec: ≤ 16k; 13k keeps the
+ *  shipped GLBs inside the game repo's size budget). */
+export const LOD0_TRIANGLE_CAP = 13000;
 
 /**
  * Game LOD tiers (Deinterleaver spec). Distances come from the species'
@@ -17,7 +18,7 @@ export const LOD0_TRIANGLE_CAP = 16000;
  */
 export const GAME_LOD_TIERS = [
   { name: 'full', detail: {} },
-  { name: 'reduced', target: 0.4, detail: { sectionStride: 2, segmentFactor: 0.6 } },
+  { name: 'reduced', target: 0.35, detail: { sectionStride: 2, segmentFactor: 0.6 } },
   { name: 'aggressive', target: 0.15, detail: { sectionStride: 4, segmentFactor: 0.4, billboard: Billboard.Single } },
   { name: 'budget', budget: 1200 },
   { name: 'impostor', impostor: true },

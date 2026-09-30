@@ -2,6 +2,15 @@
 // exporter: node and material names must be exact, and nothing but
 // POSITION / NORMAL / TEXCOORD_0 / indices may leave).
 //
+// Size (the game repo is plain git): KHR_mesh_quantization stores NORMAL
+// as normalized int8 (4-byte stride) and TEXCOORD_0 as normalized uint16
+// when every coordinate lies in [0, 1] (leaves, impostor atlas cells; bark
+// UVs repeat past 1 and stay float). POSITION stays float32: Terrain3D takes
+// the meshes without node transforms, so a quantized position could not be
+// rescaled. Godot 4.7 decodes these accessors (and re-compresses on import)
+// but refuses KHR_mesh_quantization in extensionsRequired, so it is only
+// listed in extensionsUsed.
+//
 // Layout (what Terrain3D's mesh asset reads):
 //   scene -> root node "<stem>" -> children "<stem>LOD0".."<stem>LODn",
 //   each LOD node holds one mesh whose primitives are that level's surfaces.
@@ -15,6 +24,7 @@
 // v = 0 at the top, so v is written as 1 - v.
 
 const GLTF_FLOAT = 5126;
+const GLTF_INT8 = 5120;
 const GLTF_UINT16 = 5123;
 const GLTF_UINT32 = 5125;
 const ARRAY_BUFFER = 34962;
@@ -73,12 +83,13 @@ export function encodeGLB({ name, lods, foliage = [] }) {
   let byteLength = 0;
   const materialIndex = new Map();
 
-  const view = (typed, target) => {
+  let quantized = false;
+  const view = (typed, target, byteStride) => {
     const bytes = new Uint8Array(typed.buffer, typed.byteOffset, typed.byteLength);
     const offset = byteLength;
     chunks.push({ offset, bytes });
     byteLength = pad4(offset + bytes.byteLength);
-    json.bufferViews.push({ buffer: 0, byteOffset: offset, byteLength: bytes.byteLength, target });
+    json.bufferViews.push({ buffer: 0, byteOffset: offset, byteLength: bytes.byteLength, target, ...(byteStride ? { byteStride } : {}) });
     return json.bufferViews.length - 1;
   };
   const accessor = (typed, type, componentType, target, extra = {}) => {
@@ -87,6 +98,23 @@ export function encodeGLB({ name, lods, foliage = [] }) {
       bufferView: view(typed, target), componentType, count: typed.length / components, type, ...extra,
     });
     return json.accessors.length - 1;
+  };
+  // Unit normals as normalized int8 xyz + one pad byte (vertex attributes
+  // must start on 4-byte boundaries).
+  const normalAccessor = (normals, count) => {
+    const packed = new Int8Array(count * 4);
+    for (let v = 0; v < count; v++) {
+      for (let k = 0; k < 3; k++) packed[v * 4 + k] = Math.round(Math.max(-1, Math.min(1, normals[v * 3 + k])) * 127);
+    }
+    quantized = true;
+    json.accessors.push({ bufferView: view(packed, ARRAY_BUFFER, 4), componentType: GLTF_INT8, normalized: true, count, type: 'VEC3' });
+    return json.accessors.length - 1;
+  };
+  const uvAccessor = (uvs) => {
+    if (!uvs.every((x) => x >= 0 && x <= 1)) return accessor(uvs, 'VEC2', GLTF_FLOAT, ARRAY_BUFFER);
+    quantized = true;
+    const packed = Uint16Array.from(uvs, (x) => Math.round(x * 65535));
+    return accessor(packed, 'VEC2', GLTF_UINT16, ARRAY_BUFFER, { normalized: true });
   };
   const material = (materialName) => {
     if (!materialIndex.has(materialName)) {
@@ -128,8 +156,8 @@ export function encodeGLB({ name, lods, foliage = [] }) {
       primitives.push({
         attributes: {
           POSITION: accessor(positions, 'VEC3', GLTF_FLOAT, ARRAY_BUFFER, { min, max }),
-          NORMAL: accessor(normals, 'VEC3', GLTF_FLOAT, ARRAY_BUFFER),
-          TEXCOORD_0: accessor(uvs, 'VEC2', GLTF_FLOAT, ARRAY_BUFFER),
+          NORMAL: normalAccessor(normals, normal.count),
+          TEXCOORD_0: uvAccessor(uvs),
         },
         indices: accessor(small ? Uint16Array.from(indices) : indices, 'SCALAR',
           small ? GLTF_UINT16 : GLTF_UINT32, ELEMENT_ARRAY_BUFFER),
@@ -142,6 +170,9 @@ export function encodeGLB({ name, lods, foliage = [] }) {
     json.nodes.push({ name: nodeName, mesh: json.meshes.length - 1 });
   });
 
+  // Listed as used, not required: Godot 4.7 refuses a file that requires it
+  // but decodes the normalized accessors itself.
+  if (quantized) json.extensionsUsed = ['KHR_mesh_quantization'];
   json.buffers[0].byteLength = byteLength;
   const bin = new Uint8Array(byteLength);
   for (const { offset, bytes } of chunks) bin.set(bytes, offset);

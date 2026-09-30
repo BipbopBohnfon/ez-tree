@@ -64,6 +64,20 @@ export function tintImage(image, tint) {
 }
 
 /**
+ * Copy of an RGBA image graded in sRGB: `saturation` blends toward the
+ * pixel's luma (0 = grey, 1 = source) and `gain` scales the result.
+ */
+export function gradeImage(image, { saturation = 1, gain = 1 } = {}) {
+  if (saturation === 1 && gain === 1) return image;
+  const data = new Uint8Array(image.data);
+  for (let i = 0; i < data.length; i += 4) {
+    const luma = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+    for (let c = 0; c < 3; c++) data[i + c] = Math.max(0, Math.min(255, Math.round((luma + (data[i + c] - luma) * saturation) * gain)));
+  }
+  return { ...image, data };
+}
+
+/**
  * Packs bark sources into the set's two images: albedo (colour, alpha 255)
  * and normal (NormalGL RGB, roughness from the roughness map's red in A).
  */
@@ -94,7 +108,7 @@ export async function speciesTextures(species, { base = TEXTURE_BASE, barkSize =
   const [color, normal, roughness] = await Promise.all([
     loadImage(urls.color, barkSize), loadImage(urls.normal, barkSize), loadImage(urls.roughness, barkSize),
   ]);
-  const bark = packBark({ color, normal, roughness });
+  const bark = packBark({ color: gradeImage(color, species.bark), normal, roughness });
   const barkMap = imageTexture(bark.albedo, THREE.SRGBColorSpace);
   const barkNormal = imageTexture(bark.normal, THREE.NoColorSpace);
   for (const t of [barkMap, barkNormal]) t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -140,19 +154,80 @@ detect_3d/compress_to=0
 `;
 }
 
+/** Game import settings for a variant GLB: the exporter's LOD# nodes are the
+ *  LODs (Terrain3D reads them), so Godot generates none; no shadow meshes
+ *  (every tree set draws with a vertex-displacing vegetation shader or alpha
+ *  scissor, which cannot use them), tangents for the normal maps. Written
+ *  only when the game has no .import yet. */
+export function glbImportSidecar() {
+  return `[remap]
+
+importer="scene"
+importer_version=1
+type="PackedScene"
+
+[params]
+
+nodes/root_type=""
+nodes/root_name=""
+nodes/root_script=null
+nodes/apply_root_scale=true
+nodes/root_scale=1.0
+nodes/import_as_skeleton_bones=false
+nodes/use_name_suffixes=true
+nodes/use_node_type_suffixes=true
+meshes/ensure_tangents=true
+meshes/generate_lods=false
+meshes/create_shadow_meshes=false
+meshes/light_baking=0
+meshes/lightmap_texel_size=0.2
+meshes/force_disable_compression=false
+skins/use_named_skins=true
+animation/import=false
+animation/fps=30
+animation/trimming=false
+animation/remove_immutable_tracks=true
+animation/import_rest_as_RESET=false
+import_script/path=""
+materials/extract=0
+materials/extract_format=0
+materials/extract_path=""
+_subresources={}
+gltf/naming_version=2
+gltf/embedded_image_handling=1
+gltf/texture_map_mode=1
+`;
+}
+
+/** Copy of an image with the low `bits` of R, G, B and `alphaBits` of A
+ *  cleared (keep alpha exact when it is coverage; roughness in A can
+ *  drop bits): PNG deflates the photographic noise in those bits poorly.
+ *  5-6 significant bits are invisible on bark and impostor texels. */
+export function dropLowBits(image, bits = 3, alphaBits = 0) {
+  const mask = (0xff << bits) & 0xff;
+  const alphaMask = (0xff << alphaBits) & 0xff;
+  const data = new Uint8Array(image.data);
+  for (let i = 0; i < data.length; i++) data[i] &= (i & 3) === 3 ? alphaMask : mask;
+  return { ...image, data };
+}
+
 /**
  * Encodes texture sets as game files.
  * @param {Object<string, {albedo: object, normal: object}>} sets set name -> images
+ * @param {{lossy?: string[]}} [opts] sets whose colour and normal drop
+ *   three low bits and roughness two (dropLowBits); alpha stays exact
  * @returns {Promise<{path: string, bytes: Uint8Array, keep?: boolean}[]>} paths
  *   relative to the trees folder; `keep` files are written only when absent
  */
-export async function textureSetFiles(sets) {
+export async function textureSetFiles(sets, { lossy = [] } = {}) {
   const files = [];
   const encoder = new TextEncoder();
   for (const [name, { albedo, normal }] of Object.entries(sets)) {
+    const trim = lossy.includes(name);
     for (const [kind, image] of [['albedo_alpha', albedo], ['normal_roughness', normal]]) {
       const path = `textures/${name}_${kind}.png`;
-      files.push({ path, bytes: await encodePNG(image) });
+      const out = trim ? dropLowBits(image, 3, kind === 'albedo_alpha' ? 0 : 2) : image;
+      files.push({ path, bytes: await encodePNG(out) });
       files.push({ path: `${path}.import`, bytes: encoder.encode(textureImportSidecar(kind)), keep: true });
     }
   }

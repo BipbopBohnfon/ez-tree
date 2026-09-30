@@ -5,7 +5,7 @@ export default {
   lods: [30, 70, 150, 400, 1500],
   lastShadowLod: 1,
   impostor: 'cross',
-  bark: { texture: 'Bark006', tint: 0xa07a62, textureScale: { x: 1, y: 3 } },
+  bark: { texture: 'Bark014', tint: 0xd0b8a8, textureScale: { x: 1, y: 3 } },
   leaves: {
     paint: { shape: 'needle', count: 12, length: 0.2, width: 0.35, spread: 28, branches: 6, colors: [[110, 0.3, 0.22], [125, 0.3, 0.32]], stem: { color: '#5a4030', width: 0.012 } },
     roughness: 0.75,

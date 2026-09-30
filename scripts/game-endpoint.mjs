@@ -20,12 +20,12 @@ export function treesRoot(env = process.env) {
   return path.join(game, 'assets/art/terrain/trees');
 }
 
-const GLB = /^([a-z0-9][a-z0-9_]*)\.glb$/;
+const GLB = /^([a-z0-9][a-z0-9_]*)\.glb(\.import)?$/;
 const PNG = /^textures\/([a-z0-9][a-z0-9_]*)_(albedo_alpha|normal_roughness)\.png(\.import)?$/;
 
 /**
  * Checks an export's file list against its species record; returns the
- * absolute target of each file or throws. Only `<variant file>.glb` and
+ * absolute target of each file or throws. Only `<variant file>.glb[.import]` and
  * `textures/<set>_{albedo_alpha,normal_roughness}.png[.import]` of this
  * species are accepted, and nothing may resolve outside `root`.
  */

@@ -521,10 +521,13 @@ export class Tree extends THREE.Group {
         sectionRadius *= 1 - (i / branch.sectionCount);
       }
 
-      // Use this information later on when generating child branches
+      // Use this information later on when generating child branches.
+      // A trunk's base ring lies flat on the ground even when the stem
+      // leans or splays (form.lean, form.stems), so no tilted ring half
+      // sinks below y = 0. Upstream trunks start upright: no change there.
       sections.push({
         origin: sectionOrigin.clone(),
-        orientation: sectionOrientation.clone(),
+        orientation: (i === 0 && branch.level === 0) ? new THREE.Euler() : sectionOrientation.clone(),
         radius: sectionRadius,
       });
 

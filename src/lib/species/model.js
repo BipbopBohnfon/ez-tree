@@ -13,8 +13,10 @@ export const VARIANT_COUNT = 10;
  * @property {number[]} lods End distance (m) of each LOD, length 1..5
  * @property {number} [lastShadowLod=1]
  * @property {'cross'|'card'} impostor
- * @property {{texture: string, tint: number, textureScale?: {x: number, y: number}, roughness?: number}} bark
- *   `texture` names the source bark set (ambientCG id) the exporter packs
+ * @property {{texture: string, tint: number, textureScale?: {x: number, y: number}, roughness?: number, saturation?: number, gain?: number}} bark
+ *   `texture` names the source bark set (ambientCG id) the exporter packs;
+ *   `saturation` (1 = source) and `gain` (1 = source) grade the source
+ *   colour before the tint (a white birch from a tan photo)
  * @property {{tint?: number, paint: import('../leafpaint').LeafPaintParams, roughness?: number}} leaves
  * @property {number} [swayRate=0.25] Wind sway rate for every set
  * @property {object} options Partial TreeOptions JSON (generator units)
@@ -22,6 +24,8 @@ export const VARIANT_COUNT = 10;
  *   Dotted TreeOptions paths sampled per variant, stratified across the ten
  *   variants so each parameter covers its whole range
  * @property {Object<number, object>} [lodDetail] Per-tier LODDetail overrides
+ * @property {number} [stemThin] Multi-stem limb sharing: each stem grows
+ *   children[0] / stems^stemThin main limbs (at least 2)
  */
 
 /** FNV-1a 32-bit hash of a string. */
@@ -91,6 +95,13 @@ export function speciesVariantOptions(species, index) {
   for (const [path, [lo, hi, kind]] of Object.entries(species.vary ?? {})) {
     const value = lo + (hi - lo) * stratum(species.id, path, index);
     setPath(options, path, kind === 'int' ? Math.round(value) : value);
+  }
+  // Multi-stem variants share one crown budget: each stem carries fewer
+  // main limbs (children[0] / stems^stemThin), so a three-stem tree is not
+  // three trees' worth of leaves thinned back under the LOD0 cap.
+  if (species.stemThin && options.form.stems > 1) {
+    const children = options.branch.children;
+    children[0] = Math.max(2, Math.round(children[0] / Math.pow(options.form.stems, species.stemThin)));
   }
   // Keep drooping and splayed limbs above the ground plane.
   // Leaf cards hang up to one leaf length below their branch.

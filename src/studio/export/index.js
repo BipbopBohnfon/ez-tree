@@ -4,15 +4,20 @@
 // through exportSpecies() + writeToGame().
 import { SPECIES, bakeSpeciesAtlas, buildSpecies, getSpecies } from '@dgreenheck/ez-tree';
 import { variantGLB } from './glb.js';
-import { speciesTextures, textureSetFiles } from './textures.js';
+import { glbImportSidecar, speciesTextures, textureSetFiles } from './textures.js';
 
 export { mergeCatalog, formatCatalog, checkCatalog, emptyCatalog } from './catalog.js';
 export { encodeGLB, parseGLB, variantGLB } from './glb.js';
 export { encodePNG, decodePNG } from './png.js';
-export { speciesTextures, textureSetFiles, BARK_SIZE } from './textures.js';
+export { speciesTextures, textureSetFiles, glbImportSidecar, BARK_SIZE } from './textures.js';
 
 /** Every species id, in roster order. */
 export const SPECIES_IDS = Object.keys(SPECIES);
+
+/** Impostor atlas [width, height] per mode. LOD4 starts at 350-400 m, where
+ *  a 20 m tree is ~50 px tall at 1080p; these sheets give each view ~2-3x
+ *  that (texelsPerUnit in the batch log, 9-30 px/m) at 1/8 of 2048² bytes. */
+export const IMPOSTOR_ATLAS = { cross: [1024, 512], card: [1024, 512] };
 
 const round = (x, digits = 2) => Math.round(x * 10 ** digits) / 10 ** digits;
 
@@ -23,6 +28,7 @@ const round = (x, digits = 2) => Math.round(x * 10 ** digits) / 10 ** digits;
  *   renderer: import('three').WebGLRenderer,
  *   lods?: number[],
  *   impostor?: 'cross'|'card',
+ *   atlas?: [number, number],
  *   barkSize?: number,
  *   textureBase?: string,
  *   onProgress?: (p: {stage: string, done: number, total: number, message: string}) => void,
@@ -45,6 +51,7 @@ export async function exportSpecies(speciesId, opts = {}) {
   step(0, 'textures', `${species.name}: loading bark, painting leaves`);
   const tex = await speciesTextures(species, { base: opts.textureBase, barkSize: opts.barkSize });
   let variants = [];
+  let texelsPerUnit = 0;
   try {
     step(1, 'build', `${species.name}: building ${lods.length}-level variants`);
     variants = buildSpecies(speciesId, { lods, impostor: impostorMode, textures: tex.textures });
@@ -52,7 +59,9 @@ export async function exportSpecies(speciesId, opts = {}) {
     const packed = { [sets.bark]: tex.packed.bark, [sets.leaves]: tex.packed.leaves };
     if (hasImpostor) {
       step(2, 'atlas', `${species.name}: baking the impostor atlas`);
-      const atlas = bakeSpeciesAtlas(variants, renderer);
+      const [width, height] = opts.atlas ?? IMPOSTOR_ATLAS[impostorMode];
+      const atlas = bakeSpeciesAtlas(variants, renderer, { width, height });
+      texelsPerUnit = atlas.texelsPerUnit;
       packed[sets.impostor] = { albedo: atlas.albedo, normal: atlas.normal };
       atlas.map.dispose();
       atlas.normalMap?.dispose();
@@ -61,7 +70,8 @@ export async function exportSpecies(speciesId, opts = {}) {
     }
     step(3, 'encode', `${species.name}: writing GLBs and PNGs`);
     const files = variants.map((v) => ({ path: `${v.file}.glb`, bytes: variantGLB(v) }));
-    files.push(...await textureSetFiles(packed));
+    files.push(...variants.map((v) => ({ path: `${v.file}.glb.import`, bytes: new TextEncoder().encode(glbImportSidecar()), keep: true })));
+    files.push(...await textureSetFiles(packed, { lossy: [sets.bark, sets.impostor] }));
 
     const wind = {};
     for (const role of Object.keys(sets)) wind[role] = variants[0].wind[role];
@@ -77,7 +87,7 @@ export async function exportSpecies(speciesId, opts = {}) {
       variants: variants.map((v) => ({ name: v.name, file: v.file, height: round(v.height), tris: [...v.tris] })),
     };
     step(4, 'done', `${species.name}: ${files.length} files`);
-    return { files, species: record };
+    return { files, species: record, texelsPerUnit };
   } finally {
     variants.forEach((v) => v.dispose());
     tex.dispose();

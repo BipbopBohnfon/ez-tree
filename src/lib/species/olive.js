@@ -5,10 +5,11 @@ export default {
   lods: [25, 60, 130, 350, 1200],
   lastShadowLod: 1,
   impostor: 'card',
-  bark: { texture: 'Bark013', tint: 0x9d9587, textureScale: { x: 1, y: 3 } },
+  bark: { texture: 'Bark013', tint: 0xb4aea2, textureScale: { x: 1, y: 3 }, saturation: 0.35 },
   leaves: {
     paint: { shape: 'lanceolate', count: 12, length: 0.24, width: 0.3, spread: 45, branches: 5, colors: [[80, 0.14, 0.4], [95, 0.18, 0.55]], stem: { color: '#6a6250', width: 0.007 } },
   },
+  stemThin: 0.6,
   options: {
     type: 'deciduous',
     branch: {

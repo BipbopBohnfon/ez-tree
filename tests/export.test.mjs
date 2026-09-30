@@ -137,9 +137,21 @@ test('GLB: one LOD when lods has one entry; UV v flipped to glTF', () => {
     const p = json.meshes[0].primitives[1];
     const acc = json.accessors[p.attributes.TEXCOORD_0];
     const view = json.bufferViews[acc.bufferView];
-    const uvs = new Float32Array(bin.buffer.slice(bin.byteOffset + view.byteOffset, bin.byteOffset + view.byteOffset + view.byteLength));
+    // Leaf UVs lie in [0, 1]: normalized uint16 (KHR_mesh_quantization).
+    assert.equal(acc.componentType, 5123);
+    assert.equal(acc.normalized, true);
+    const uvs = new Uint16Array(bin.buffer.slice(bin.byteOffset + view.byteOffset, bin.byteOffset + view.byteOffset + view.byteLength));
     const src = variant.levels[0].leaves.attributes.uv;
-    assert.ok(Math.abs(uvs[1] - (1 - src.getY(0))) < 1e-6);
+    assert.ok(Math.abs(uvs[1] / 65535 - (1 - src.getY(0))) < 1e-4);
+    // Normals: normalized int8 xyz + pad, 4-byte stride, unit length.
+    const nacc = json.accessors[p.attributes.NORMAL];
+    const nview = json.bufferViews[nacc.bufferView];
+    assert.deepEqual([nacc.componentType, nacc.normalized, nview.byteStride], [5120, true, 4]);
+    const normals = new Int8Array(bin.buffer.slice(bin.byteOffset + nview.byteOffset, bin.byteOffset + nview.byteOffset + nview.byteLength));
+    const n = variant.levels[0].leaves.attributes.normal;
+    for (let k = 0; k < 3; k++) assert.ok(Math.abs(normals[k] / 127 - [n.getX(0), n.getY(0), n.getZ(0)][k]) < 0.01);
+    assert.deepEqual(json.extensionsUsed, ['KHR_mesh_quantization']);
+    assert.equal(json.extensionsRequired, undefined, 'Godot 4.7 refuses a required quantization extension');
   } finally {
     variant.dispose();
   }
@@ -154,6 +166,7 @@ test('game endpoint: path rules, server-side merge, keep files, atomic catalog',
     assert.equal(ok('oak_01.glb')[0], path.join(root, 'oak_01.glb'));
     ok('textures/oak_bark_albedo_alpha.png');
     ok('textures/oak_impostor_normal_roughness.png.import');
+    ok('oak_01.glb.import');
     for (const bad of ['../oak_01.glb', 'textures/../../x.png', 'pine_01.glb', 'oak_01.gltf', '/etc/passwd',
       'textures/elm_bark_albedo_alpha.png', 'textures/sub/oak_bark_albedo_alpha.png', 'catalog.json']) {
       assert.throws(() => ok(bad), /refused path/, bad);
