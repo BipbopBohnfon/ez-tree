@@ -126,9 +126,12 @@ export async function speciesTextures(species, { base = TEXTURE_BASE, barkSize =
   };
 }
 
-/** Game import settings (assets/art/terrain/meshes/README.md): lossless,
- *  mipmapped, no alpha-border repair, no normal-map compression for the
- *  normal/roughness pair. Written only when the game has no .import yet. */
+/** Game import settings (assets/art/terrain/trees/README.md): VRAM
+ *  compressed at high quality (BPTC on desktop: keeps all four channels),
+ *  mipmapped, no alpha-border repair. The normal/roughness pair has
+ *  normal-map detection disabled: detection would pick RGTC and drop the
+ *  roughness in alpha. An existing game .import has these [params] keys
+ *  patched in (sidecar.js); its uid and other keys are kept. */
 export function textureImportSidecar(kind) {
   return `[remap]
 
@@ -137,8 +140,8 @@ type="CompressedTexture2D"
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/normal_map=${kind === 'normal_roughness' ? 2 : 0}
 compress/channel_pack=0
@@ -157,8 +160,8 @@ detect_3d/compress_to=0
 /** Game import settings for a variant GLB: the exporter's LOD# nodes are the
  *  LODs (Terrain3D reads them), so Godot generates none; no shadow meshes
  *  (every tree set draws with a vertex-displacing vegetation shader or alpha
- *  scissor, which cannot use them), tangents for the normal maps. Written
- *  only when the game has no .import yet. */
+ *  scissor, which cannot use them), tangents for the normal maps. An existing
+ *  game .import has these [params] keys patched in (sidecar.js). */
 export function glbImportSidecar() {
   return `[remap]
 
@@ -216,8 +219,9 @@ export function dropLowBits(image, bits = 3, alphaBits = 0) {
  * @param {Object<string, {albedo: object, normal: object}>} sets set name -> images
  * @param {{lossy?: string[]}} [opts] sets whose colour and normal drop
  *   three low bits and roughness two (dropLowBits); alpha stays exact
- * @returns {Promise<{path: string, bytes: Uint8Array, keep?: boolean}[]>} paths
- *   relative to the trees folder; `keep` files are written only when absent
+ * @returns {Promise<{path: string, bytes: Uint8Array, patch?: boolean}[]>} paths
+ *   relative to the trees folder; an existing `patch` file has only its
+ *   exporter-owned keys updated (patchImportSidecar)
  */
 export async function textureSetFiles(sets, { lossy = [] } = {}) {
   const files = [];
@@ -228,7 +232,7 @@ export async function textureSetFiles(sets, { lossy = [] } = {}) {
       const path = `textures/${name}_${kind}.png`;
       const out = trim ? dropLowBits(image, 3, kind === 'albedo_alpha' ? 0 : 2) : image;
       files.push({ path, bytes: await encodePNG(out) });
-      files.push({ path: `${path}.import`, bytes: encoder.encode(textureImportSidecar(kind)), keep: true });
+      files.push({ path: `${path}.import`, bytes: encoder.encode(textureImportSidecar(kind)), patch: true });
     }
   }
   return files;

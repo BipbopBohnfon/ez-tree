@@ -36,7 +36,7 @@ const round = (x, digits = 2) => Math.round(x * 10 ** digits) / 10 ** digits;
  * }} opts `lods` overrides the species' end distances (length 1..5; fewer
  *   than 5 exports no impostor), `impostor` its impostor mode, `species`
  *   the registered def (Tree Studio overrides: src/studio/overrides.js).
- * @returns {Promise<{files: {path: string, bytes: Uint8Array, keep?: boolean}[], species: object}>}
+ * @returns {Promise<{files: {path: string, bytes: Uint8Array, patch?: boolean}[], species: object}>}
  *   paths relative to the game's assets/art/terrain/trees/; `species` is the
  *   catalog record (variants without slots: the catalog merge assigns them).
  */
@@ -72,7 +72,7 @@ export async function exportSpecies(speciesId, opts = {}) {
     }
     step(3, 'encode', `${species.name}: writing GLBs and PNGs`);
     const files = variants.map((v) => ({ path: `${v.file}.glb`, bytes: variantGLB(v) }));
-    files.push(...variants.map((v) => ({ path: `${v.file}.glb.import`, bytes: new TextEncoder().encode(glbImportSidecar()), keep: true })));
+    files.push(...variants.map((v) => ({ path: `${v.file}.glb.import`, bytes: new TextEncoder().encode(glbImportSidecar()), patch: true })));
     files.push(...await textureSetFiles(packed, { lossy: [sets.bark, sets.impostor] }));
 
     const wind = {};
@@ -105,15 +105,15 @@ function base64(bytes) {
 /**
  * Sends an export to the studio dev server (POST /__game/export), which
  * merges the species into the game's catalog.json and writes the files.
- * @param {{files: {path: string, bytes: Uint8Array, keep?: boolean}[], species: object}} result
+ * @param {{files: {path: string, bytes: Uint8Array, patch?: boolean}[], species: object}} result
  * @param {{endpoint?: string}} [opts]
- * @returns {Promise<{species: object, written: string[], kept: string[], root: string}>}
+ * @returns {Promise<{species: object, written: string[], patched: string[], kept: string[], root: string}>}
  *   the merged catalog record (with slots) and what was written
  */
 export async function writeToGame(result, { endpoint = '/__game/export' } = {}) {
   const body = JSON.stringify({
     species: result.species,
-    files: result.files.map((f) => ({ path: f.path, keep: !!f.keep, base64: base64(f.bytes) })),
+    files: result.files.map((f) => ({ path: f.path, patch: !!f.patch, base64: base64(f.bytes) })),
   });
   const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
   const reply = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));

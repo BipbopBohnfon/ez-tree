@@ -35,7 +35,7 @@ for (const id of ids) {
         body: JSON.stringify({ id, fingerprint: fingerprint(species) }) }).catch(() => {});
     }
     const line = `${id}: slots ${slots[0]}..${slots.at(-1)}  glb ${(bytes(/\.glb$/) / 1e6).toFixed(2)} MB  png ${(bytes(/\.png$/) / 1e6).toFixed(2)} MB  ` +
-      `atlas ${exported.texelsPerUnit.toFixed(1)} px/m  (${reply.written.length} written, ${reply.kept.length} kept) ${((performance.now() - t0) / 1000).toFixed(1)}s`;
+      `atlas ${exported.texelsPerUnit.toFixed(1)} px/m  (${reply.written.length} written, ${reply.patched.length} patched, ${reply.kept.length} kept) ${((performance.now() - t0) / 1000).toFixed(1)}s`;
     summary.push(line);
     say(line);
   } catch (error) {

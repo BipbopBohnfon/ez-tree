@@ -23,7 +23,9 @@ left untouched.
 - The game library is `src/lib/game.js` (`buildVariant`, `buildSpecies`, `bakeSpeciesAtlas`).
   The LOD0 cap is 13k triangles.
 - The exporter is `src/studio/export/`. It writes quantized GLBs, packed PNG sets, `.import`
-  sidecars and the catalog merge.
+  sidecars and the catalog merge. A sidecar the game already has is patched, not replaced: the
+  exporter's `[params]` keys (VRAM-compressed PNGs, GLB LOD/shadow settings) are updated and the
+  `uid`, `[remap]` and every other key stay (`sidecar.js`).
 
 ```bash
 npm install

@@ -9,6 +9,8 @@ import { checkCatalog, emptyCatalog, formatCatalog, mergeCatalog } from '../src/
 import { decodePNG, encodePNG } from '../src/studio/export/png.js';
 import { encodeGLB, parseGLB, variantGLB } from '../src/studio/export/glb.js';
 import { applyExport, resolveTargets } from '../scripts/game-endpoint.mjs';
+import { ownedParams, patchImportSidecar } from '../src/studio/export/sidecar.js';
+import { glbImportSidecar, textureImportSidecar } from '../src/studio/export/textures.js';
 
 const record = (id, files, extra = {}) => ({
   id, name: id.replace(/(^|_)(\w)/g, (_, s, c) => `${s ? ' ' : ''}${c.toUpperCase()}`),
@@ -158,7 +160,7 @@ test('GLB: one LOD when lods has one entry; UV v flipped to glTF', () => {
   assert.throws(() => encodeGLB({ name: 'x', lods: [{ primitives: [] }] }), /no triangles/);
 });
 
-test('game endpoint: path rules, server-side merge, keep files, atomic catalog', async () => {
+test('game endpoint: path rules, server-side merge, patched sidecars, atomic catalog', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'trees-'));
   try {
     const species = record('oak', ['01']);
@@ -174,15 +176,19 @@ test('game endpoint: path rules, server-side merge, keep files, atomic catalog',
     const b64 = (s) => Buffer.from(s).toString('base64');
     const files = [
       { path: 'oak_01.glb', base64: b64('glb') },
-      { path: 'textures/oak_bark_albedo_alpha.png.import', base64: b64('first'), keep: true },
+      { path: 'textures/oak_bark_albedo_alpha.png.import', base64: b64('[params]\n\ncompress/mode=0\n'), patch: true },
     ];
     const reply = await applyExport(root, { species, files });
     assert.equal(reply.species.variants[0].slot, 36);
     assert.deepEqual(reply.written, ['oak_01.glb', 'textures/oak_bark_albedo_alpha.png.import', 'catalog.json']);
-    files[1].base64 = b64('second');
+    const sidecar = path.join(root, 'textures/oak_bark_albedo_alpha.png.import');
+    await writeFile(sidecar, '[remap]\n\nuid="uid://keepme"\n\n[params]\n\ncompress/mode=0\nextra=1\n');
+    files[1].base64 = b64('[params]\n\ncompress/mode=2\n');
     const again = await applyExport(root, { species, files });
-    assert.deepEqual(again.kept, ['textures/oak_bark_albedo_alpha.png.import']);
-    assert.equal(await readFile(path.join(root, 'textures/oak_bark_albedo_alpha.png.import'), 'utf8'), 'first');
+    assert.deepEqual(again.patched, ['textures/oak_bark_albedo_alpha.png.import']);
+    assert.equal(await readFile(sidecar, 'utf8'), '[remap]\n\nuid="uid://keepme"\n\n[params]\n\ncompress/mode=2\nextra=1\n');
+    const third = await applyExport(root, { species, files });
+    assert.deepEqual([third.patched, third.kept], [[], ['textures/oak_bark_albedo_alpha.png.import']]);
     // A refused merge writes nothing.
     await writeFile(path.join(root, 'oak_01.glb'), 'old');
     await assert.rejects(applyExport(root, { species: record('oak', ['02']), files: [{ path: 'oak_02.glb', base64: b64('x') }] }), /missing from the export/);
@@ -192,4 +198,63 @@ test('game endpoint: path rules, server-side merge, keep files, atomic catalog',
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+// A sidecar as Godot rewrites it: uid, [deps], keys the template lacks.
+const GODOT_PNG_IMPORT = `[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://cyswrcqffcu3x"
+path="res://.godot/imported/x.png-d279.ctex"
+metadata={
+"vram_texture": false
+}
+
+[deps]
+
+source_file="res://assets/art/terrain/trees/textures/x.png"
+dest_files=["res://.godot/imported/x.png-d279.ctex"]
+
+[params]
+
+compress/mode=0
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/uastc_level=0
+compress/normal_map=2
+mipmaps/generate=true
+process/fix_alpha_border=false
+detect_3d/compress_to=0
+`;
+
+test('patchImportSidecar: updates owned keys, keeps uid/remap/deps and foreign keys', () => {
+  const out = patchImportSidecar(GODOT_PNG_IMPORT, textureImportSidecar('normal_roughness'));
+  const params = (text) => Object.fromEntries(ownedParams(text.replace(/^\[remap\][\s\S]*?(?=\[params\])/, '')));
+  assert.match(out, /uid="uid:\/\/cyswrcqffcu3x"/);
+  assert.equal(out.slice(0, out.indexOf('[params]')), GODOT_PNG_IMPORT.slice(0, GODOT_PNG_IMPORT.indexOf('[params]')));
+  const p = params(out);
+  assert.equal(p['compress/mode'], '2');
+  assert.equal(p['compress/high_quality'], 'true');
+  assert.equal(p['compress/normal_map'], '2');
+  assert.equal(p['compress/uastc_level'], '0', 'a key the exporter does not own stays');
+  assert.equal(p['roughness/src_normal'], '""', 'a missing owned key is appended');
+  for (const [k, v] of ownedParams(textureImportSidecar('normal_roughness'))) assert.equal(p[k], v, k);
+  assert.equal(params(patchImportSidecar(GODOT_PNG_IMPORT, textureImportSidecar('albedo_alpha')))['compress/normal_map'], '0');
+});
+
+test('patchImportSidecar: idempotent; multi-line and _-prefixed values survive', () => {
+  const tpl = textureImportSidecar('albedo_alpha');
+  const once = patchImportSidecar(GODOT_PNG_IMPORT, tpl);
+  assert.equal(patchImportSidecar(once, tpl), once);
+  const glb = glbImportSidecar();
+  const godotGlb = glb.replace('meshes/generate_lods=false', 'meshes/generate_lods=true')
+    .replace('_subresources={}', '_subresources={\n"materials": {\n"bark": {"use_external/enabled": true}\n}\n}');
+  const patched = patchImportSidecar(godotGlb, glb);
+  assert.match(patched, /meshes\/generate_lods=false/);
+  assert.match(patched, /"use_external\/enabled": true/, '_subresources is the game\'s');
+  assert.equal(patchImportSidecar(patched, glb), patched);
+  assert.equal(patchImportSidecar(glb, glb), glb);
+  // No [params] at all: the section is appended.
+  assert.match(patchImportSidecar('[remap]\n\nuid="uid://a"\n', tpl), /uid="uid:\/\/a"\n\n\[params\]\n\ncompress\/mode=2\n/);
 });

@@ -1,15 +1,20 @@
 // Studio dev-server endpoints that write exports into the game
 // (vite.studio.config.js mounts them):
 //   GET  /__game/catalog  -> the game's catalog.json (an empty catalog if none)
-//   POST /__game/export   <- {species, files: [{path, base64, keep?}]}
+//   POST /__game/export   <- {species, files: [{path, base64, patch?}]}
 // The export's species record is merged into catalog.json server-side with
 // mergeCatalog() (slot rules), before any file is touched: a refused merge
 // writes nothing. Files and the catalog are written via temp file + rename.
+// A `patch` file (an .import sidecar) that already exists is patched, not
+// replaced: its exporter-owned [params] keys take the sent values and its
+// uid, [remap] and other keys stay (patchImportSidecar); an already-current
+// one is left untouched (`kept`).
 // Requests are serialised so two exports never race the catalog.
 import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { emptyCatalog, formatCatalog, mergeCatalog } from '../src/studio/export/catalog.js';
+import { patchImportSidecar } from '../src/studio/export/sidecar.js';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -63,22 +68,30 @@ async function atomicWrite(target, bytes) {
 
 const exists = (file) => stat(file).then(() => true, () => false);
 
-/** Applies one export; returns {species, written, kept, root}. */
+/** Applies one export; returns {species, written, patched, kept, root}. */
 export async function applyExport(root, payload) {
   const { species, files } = payload ?? {};
   if (!species || !Array.isArray(files)) throw new Error('payload needs species and files');
   const targets = resolveTargets(root, species, files);
   const catalogFile = path.join(root, 'catalog.json');
   const merged = mergeCatalog(await readCatalog(catalogFile), species);
-  const written = [], kept = [];
+  const written = [], patched = [], kept = [];
   for (let i = 0; i < files.length; i++) {
-    if (files[i].keep && await exists(targets[i])) { kept.push(files[i].path); continue; }
-    await atomicWrite(targets[i], Buffer.from(files[i].base64 ?? '', 'base64'));
+    const bytes = Buffer.from(files[i].base64 ?? '', 'base64');
+    if (files[i].patch && await exists(targets[i])) {
+      const current = await readFile(targets[i], 'utf8');
+      const next = patchImportSidecar(current, bytes.toString('utf8'));
+      if (next === current) { kept.push(files[i].path); continue; }
+      await atomicWrite(targets[i], next);
+      patched.push(files[i].path);
+      continue;
+    }
+    await atomicWrite(targets[i], bytes);
     written.push(files[i].path);
   }
   await atomicWrite(catalogFile, formatCatalog(merged));
   written.push('catalog.json');
-  return { species: merged.species.find((s) => s.id === species.id), written, kept, root };
+  return { species: merged.species.find((s) => s.id === species.id), written, patched, kept, root };
 }
 
 const send = (res, status, body) => {

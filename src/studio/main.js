@@ -534,7 +534,7 @@ async function runExport(id, index, total) {
   const reply = await writeToGame(result);
   await fetch('/__studio/stamps', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, fingerprint: fingerprint(def) }) });
   const slots = reply.species.variants.map((v) => v.slot);
-  logLine(`  wrote ${reply.written.length} files (${(bytes / 1e6).toFixed(1)} MB), kept ${reply.kept.length}`, 'ok');
+  logLine(`  wrote ${reply.written.length} files (${(bytes / 1e6).toFixed(1)} MB), patched ${reply.patched.length}, kept ${reply.kept.length}`, 'ok');
   const glbs = reply.written.filter((f) => f.endsWith('.glb'));
   if (glbs.length) logLine(`    ${glbs.length} GLB  ${glbs[0]} … ${glbs.at(-1)}`, 'dim');
   for (const f of reply.written.filter((x) => x.endsWith('.png'))) logLine(`    ${f.replace('textures/', 'textures/ ')}`, 'dim');
