@@ -10,6 +10,34 @@
 <img src="https://github.com/user-attachments/assets/cb5f5edd-3e1b-453d-925f-734965126b17">
 </p>
 
+# Deinterleaver game trees
+
+This fork (branch `deinterleaver`) generates the Deinterleaver game's scatter trees: 10 species
+× 10 variants in metres. Each variant has explicit `LOD0..LOD4` nodes (LOD4 is a cross or card
+impostor) and three texture sets per species, and the exporter merges them into the game's
+`assets/art/terrain/trees/catalog.json` by its slot rules. The upstream demo app (`src/app`) is
+left untouched.
+
+- Species live in `src/lib/species/*.js`: form options, per-variant `vary` ranges, the bark source
+  and its grading (`saturation`, `gain`, tint), the painted leaf, LOD distances and the impostor mode.
+- The game library is `src/lib/game.js` (`buildVariant`, `buildSpecies`, `bakeSpeciesAtlas`).
+  The LOD0 cap is 13k triangles.
+- The exporter is `src/studio/export/`. It writes quantized GLBs, packed PNG sets, `.import`
+  sidecars and the catalog merge.
+
+```bash
+npm install
+npm run fetch:textures        # resolve the LFS bark photos into .cache/textures (once)
+npm run studio                # Tree Studio on http://localhost:5200 (preview, export to the game)
+DEINTERLEAVER_GAME_ROOT=/path/to/game npm run export:all               # batch, every species
+DEINTERLEAVER_GAME_ROOT=/path/to/game npm run export:all -- beech olive
+npm test                      # build the library and run the node tests
+```
+
+Without `DEINTERLEAVER_GAME_ROOT`, exports go to the checkout this fork sits in (`../..`). After an
+export, run `./run_tests.sh --import` and `./run_review.sh map_trees` in the game. The game's
+`assets/art/terrain/trees/README.md` lists the species, their sizes and the licences.
+
 # About
 EZ-Tree is a procedural tree generator with dozens of tunable parameters. The standalone tree generation code is published as a library and can be imported into your own application for dynamically generating trees on demand. Additionally, there is a standalone web app which allows you to create trees within the browser and export as .PNG or .GLB files.
 
