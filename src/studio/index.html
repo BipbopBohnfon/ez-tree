@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tree Studio</title>
+  <link rel="stylesheet" href="./studio.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark"></span><b>Tree Studio</b><span class="brand-sub">Deinterleaver</span></div>
+    <div class="crumbs" id="crumbs"></div>
+    <div class="top-right">
+      <span class="chip" id="save-state" title="Species overrides (Ctrl+S saves)">saved</span>
+      <span class="chip mono" id="game-root" title="Exports land here (DEINTERLEAVER_GAME_ROOT)">game: …</span>
+      <button class="icon-btn" id="help-btn" title="Keyboard shortcuts (?)">?</button>
+    </div>
+  </header>
+
+  <nav class="rail" id="rail">
+    <div class="rail-head">
+      <input id="filter" class="search" placeholder="Filter species" spellcheck="false">
+    </div>
+    <div class="rail-list" id="species-list"></div>
+    <div class="rail-foot">
+      <span><i class="dot st-none"></i>not exported</span>
+      <span><i class="dot st-ok"></i>exported</span>
+      <span><i class="dot st-changed"></i>changed</span>
+    </div>
+  </nav>
+
+  <main class="stage" id="stage">
+    <canvas id="view"></canvas>
+    <div class="hud glass" id="hud"></div>
+    <div class="toolbar glass" id="toolbar"></div>
+    <div class="telephoto glass" id="telephoto"><span class="tag">telephoto</span><span class="tele-lod" id="tele-lod"></span></div>
+    <div class="walk-hint glass" id="walk-hint">WASD walk · Shift run · drag to look</div>
+    <div class="busy" id="busy"><span class="spinner"></span><span id="busy-text">building</span></div>
+    <div class="strip glass" id="strip"></div>
+  </main>
+
+  <aside class="panel" id="panel">
+    <div class="tabs" id="tabs">
+      <button data-tab="design" class="on">Design</button>
+      <button data-tab="lod">LOD</button>
+      <button data-tab="inspect">Inspect</button>
+      <button data-tab="export">Export</button>
+    </div>
+    <section class="tab-body on" data-tab="design" id="tab-design"></section>
+    <section class="tab-body" data-tab="lod" id="tab-lod"></section>
+    <section class="tab-body" data-tab="inspect" id="tab-inspect"></section>
+    <section class="tab-body" data-tab="export" id="tab-export"></section>
+  </aside>
+
+  <div class="modal-back" id="modal"><div class="modal glass"><h3 id="modal-title"></h3><p id="modal-text"></p>
+    <div class="modal-actions"><button class="btn ghost" id="modal-cancel">Cancel</button><button class="btn accent" id="modal-ok">OK</button></div></div></div>
+  <div class="modal-back" id="help"><div class="modal glass help"><h3>Shortcuts</h3><div id="help-body"></div>
+    <div class="modal-actions"><button class="btn ghost" id="help-close">Close</button></div></div></div>
+  <div class="toast" id="toast"></div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

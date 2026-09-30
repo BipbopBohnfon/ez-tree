@@ -104,6 +104,43 @@ npx vite --host 127.0.0.1 --port 5199
 
 The browser check uses a synthetic alpha-cutout leaf texture so it also works before Git LFS texture assets have been downloaded.
 
+# Tree Studio (Deinterleaver)
+
+A preview, tuning and export tool for the game's ten tree species (`src/studio`).
+
+```bash
+npm run fetch:textures        # once: real bark images into .cache/textures
+npm run studio                # http://localhost:5200 (STUDIO_PORT=5201 to move it)
+DEINTERLEAVER_GAME_ROOT=/path/to/game npm run studio   # export somewhere else
+```
+
+- **Rail**: species by biome with height range, variant count and export status
+  (not exported / exported / changed since export, from the game's `catalog.json`
+  and `.cache/studio/stamps.json`).
+- **Variant strip**: ten cached thumbnails; click selects, shift-click compares two.
+- **Viewport**: orbit camera, sky and sun with shadows, biome-tinted ground, a 1.75 m
+  figure for scale, metre grid (G), wind sway (V), wireframe (X), forest mode (T:
+  ~60 trees of the species or the whole biome, WASD walk).
+- **LOD tab**: Auto (by camera distance, with a 5 → 1500 m fly-out and a telephoto
+  inset) or pinned Full/LOD1..LOD4; per-level triangles; end distances, chain length
+  and impostor mode (cross / card, card previewed Y-billboarded).
+- **Design tab**: live form parameters. Each is fixed or varied per variant (`~`),
+  plus height range, leaf colours and tints, bark tint and a per-variant seed nudge.
+  Saving writes `src/lib/species/overrides/<id>.json` (a sparse patch over the species
+  def; `null` deletes a key). `src/studio/overrides.js` applies it for the preview, the
+  studio export and `npm run export:all`, so an exported tree equals the previewed one.
+- **Inspect tab**: height, trunk radius, triangles, packed texture sets (bark, leaves,
+  impostor atlas + normal), wind, catalog slots.
+- **Export tab**: target folder, Export species / Export all (confirms before
+  overwriting), progress and a log of files and slots.
+
+Press `?` in the studio for every shortcut. Headless check (screenshots plus the
+override round trip; the game root must be a scratch folder):
+
+```bash
+DEINTERLEAVER_GAME_ROOT=/tmp/scratch-game npm run studio:shots -- /tmp/shots
+```
+
 # Running Standalone App Locally
 
 To run the standalone app locally, you first need to build the EZ-Tree library before running the app.
