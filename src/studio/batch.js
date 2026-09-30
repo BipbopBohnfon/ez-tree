@@ -4,6 +4,7 @@
 // PASS or FAIL (the driver's exit status).
 import * as THREE from 'three';
 import { SPECIES_IDS, exportSpecies, writeToGame } from './export/index.js';
+import { effectiveSpecies, fingerprint, loadOverrides } from './overrides.js';
 
 const result = document.querySelector('#result');
 const log = document.querySelector('#log');
@@ -15,15 +16,24 @@ const ids = asked.includes('all') ? SPECIES_IDS : asked;
 const lods = params.get('lods') ? params.get('lods').split(',').map(Number) : undefined;
 const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: false });
 
+// Studio overrides (src/lib/species/overrides/*.json) apply here exactly as
+// in the studio preview.
+const overrides = await loadOverrides().catch(() => ({}));
 const failures = [];
 const summary = [];
 for (const id of ids) {
   const t0 = performance.now();
   try {
-    const exported = await exportSpecies(id, { renderer, lods, onProgress: (p) => say(`  ${p.stage}: ${p.message}`) });
+    const species = effectiveSpecies(id, overrides);
+    if (overrides[id]) say(`  ${id}: studio override applied`);
+    const exported = await exportSpecies(id, { renderer, lods, species, onProgress: (p) => say(`  ${p.stage}: ${p.message}`) });
     const bytes = (re) => exported.files.filter((f) => re.test(f.path)).reduce((n, f) => n + f.bytes.length, 0);
     const reply = await writeToGame(exported);
     const slots = reply.species.variants.map((v) => v.slot);
+    if (!lods) {
+      await fetch('/__studio/stamps', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, fingerprint: fingerprint(species) }) }).catch(() => {});
+    }
     const line = `${id}: slots ${slots[0]}..${slots.at(-1)}  glb ${(bytes(/\.glb$/) / 1e6).toFixed(2)} MB  png ${(bytes(/\.png$/) / 1e6).toFixed(2)} MB  ` +
       `atlas ${exported.texelsPerUnit.toFixed(1)} px/m  (${reply.written.length} written, ${reply.kept.length} kept) ${((performance.now() - t0) / 1000).toFixed(1)}s`;
     summary.push(line);

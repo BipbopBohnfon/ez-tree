@@ -4,7 +4,8 @@ import { Billboard } from './enums';
 import {
   bakeAtlas, bakeImpostor, geometryBounds, imageTexture, impostorGeometry, impostorViews,
 } from './impostor';
-import { getSpecies, speciesSets, speciesWind, variantMeta, variantOptions, VARIANT_COUNT } from './species/index';
+import { getSpecies, speciesSets, speciesWind, VARIANT_COUNT } from './species/index';
+import { speciesVariantOptions, variantInfo } from './species/model';
 
 /** LOD0 triangle cap for the largest trees (spec: ≤ 16k; 13k keeps the
  *  shipped GLBs inside the game repo's size budget). */
@@ -76,8 +77,11 @@ function fitDetail(tree, detail, goal) {
  *   textures?: {bark?: {map?: THREE.Texture, normalMap?: THREE.Texture}, leaves?: {map?: THREE.Texture, normalMap?: THREE.Texture}},
  *   tiers?: object[],
  *   impostor?: 'cross'|'card',
+ *   species?: import('./species/model').SpeciesDef,
  * }} [opts] `lods` overrides the species' end distances (length 1..5;
- *   length 1 = full detail only); `impostor` overrides the species' mode.
+ *   length 1 = full detail only); `impostor` overrides the species' mode;
+ *   `species` replaces the registered def of `speciesId` (Tree Studio
+ *   overrides); its optional `seedNudge` {index: n} offsets variant seeds.
  * @returns {{
  *   species: object, index: number, name: string, file: string, options: import('./options').default,
  *   height: number, scale: number, bounds: THREE.Box3, tris: number[], lods: number[],
@@ -90,9 +94,11 @@ function fitDetail(tree, detail, goal) {
  * }}
  */
 export function buildVariant(speciesId, index, opts = {}) {
-  const species = getSpecies(speciesId);
-  const meta = variantMeta(speciesId, index);
-  const options = variantOptions(speciesId, index);
+  const species = opts.species ?? getSpecies(speciesId);
+  const meta = variantInfo(species, index);
+  const options = speciesVariantOptions(species, index);
+  const nudge = species.seedNudge?.[index] ?? 0;
+  if (nudge) options.seed = (((options.seed + nudge) % 65536) + 65536) % 65536;
   const lods = opts.lods ?? species.lods;
   if (!Array.isArray(lods) || lods.length < 1 || lods.length > 5) {
     throw new RangeError('lods must hold 1..5 end distances');

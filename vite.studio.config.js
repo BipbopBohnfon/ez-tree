@@ -6,6 +6,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { CACHE_ROOT } from './scripts/texture-paths.mjs';
 import { gameEndpoint, treesRoot } from './scripts/game-endpoint.mjs';
+import { studioEndpoint } from './scripts/studio-endpoint.mjs';
 
 const TYPES = { '.jpg': 'image/jpeg', '.png': 'image/png', '.md': 'text/plain' };
 
@@ -19,6 +20,7 @@ function studioServer() {
       createReadStream(file).pipe(res);
     });
     server.middlewares.use(gameEndpoint({ root: treesRoot() }));
+    server.middlewares.use(studioEndpoint({ root: treesRoot() }));
   };
   return { name: 'deinterleaver-studio', configureServer: serve, configurePreviewServer: serve };
 }
@@ -30,7 +32,7 @@ export default {
     alias: { '@dgreenheck/ez-tree': path.resolve(__dirname, 'src/lib/index.js') },
   },
   server: {
-    port: 5200,
+    port: Number(process.env.STUDIO_PORT) || 5200,
     fs: { allow: [__dirname] },
   },
   plugins: [studioServer()],

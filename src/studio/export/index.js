@@ -31,15 +31,17 @@ const round = (x, digits = 2) => Math.round(x * 10 ** digits) / 10 ** digits;
  *   atlas?: [number, number],
  *   barkSize?: number,
  *   textureBase?: string,
+ *   species?: object,
  *   onProgress?: (p: {stage: string, done: number, total: number, message: string}) => void,
  * }} opts `lods` overrides the species' end distances (length 1..5; fewer
- *   than 5 exports no impostor), `impostor` its impostor mode.
+ *   than 5 exports no impostor), `impostor` its impostor mode, `species`
+ *   the registered def (Tree Studio overrides: src/studio/overrides.js).
  * @returns {Promise<{files: {path: string, bytes: Uint8Array, keep?: boolean}[], species: object}>}
  *   paths relative to the game's assets/art/terrain/trees/; `species` is the
  *   catalog record (variants without slots: the catalog merge assigns them).
  */
 export async function exportSpecies(speciesId, opts = {}) {
-  const species = getSpecies(speciesId);
+  const species = opts.species ?? getSpecies(speciesId);
   const { renderer, onProgress = () => {} } = opts;
   const lods = opts.lods ?? species.lods;
   const impostorMode = opts.impostor ?? species.impostor;
@@ -54,7 +56,7 @@ export async function exportSpecies(speciesId, opts = {}) {
   let texelsPerUnit = 0;
   try {
     step(1, 'build', `${species.name}: building ${lods.length}-level variants`);
-    variants = buildSpecies(speciesId, { lods, impostor: impostorMode, textures: tex.textures });
+    variants = buildSpecies(speciesId, { lods, impostor: impostorMode, textures: tex.textures, species });
     const sets = { ...variants[0].sets };
     const packed = { [sets.bark]: tex.packed.bark, [sets.leaves]: tex.packed.leaves };
     if (hasImpostor) {
