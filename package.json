@@ -34,7 +34,11 @@
     "build:lib": "vite build --config vite.lib.config.js",
     "build:watch": "vite build --config vite.lib.config.js --watch",
     "app": "npm run build:lib && vite --config vite.app.config.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "studio": "vite --config vite.studio.config.js",
+    "export:all": "node scripts/export-all.mjs",
+    "fetch:textures": "node scripts/fetch-textures.mjs",
+    "test": "npm run build:lib && node --test tests/"
   },
   "devDependencies": {
     "@types/three": "^0.169.0",

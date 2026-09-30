@@ -74,8 +74,9 @@ function fitDetail(tree, detail, goal) {
  *   bakeImpostor?: boolean,
  *   textures?: {bark?: {map?: THREE.Texture, normalMap?: THREE.Texture}, leaves?: {map?: THREE.Texture, normalMap?: THREE.Texture}},
  *   tiers?: object[],
+ *   impostor?: 'cross'|'card',
  * }} [opts] `lods` overrides the species' end distances (length 1..5;
- *   length 1 = full detail only).
+ *   length 1 = full detail only); `impostor` overrides the species' mode.
  * @returns {{
  *   species: object, index: number, name: string, file: string, options: import('./options').default,
  *   height: number, scale: number, bounds: THREE.Box3, tris: number[], lods: number[],
@@ -96,6 +97,7 @@ export function buildVariant(speciesId, index, opts = {}) {
     throw new RangeError('lods must hold 1..5 end distances');
   }
   const tiers = opts.tiers ?? GAME_LOD_TIERS;
+  const impostorMode = opts.impostor ?? species.impostor;
   const tree = new Tree(options);
   const full = tree.createGeometry({});
 
@@ -148,7 +150,7 @@ export function buildVariant(speciesId, index, opts = {}) {
       product.leaves.computeBoundingSphere();
       levels.push({ index: i, kind, distance: lods[i], detail, branches: product.branches, leaves: product.leaves, tris: triangles(product) });
     } else {
-      levels.push({ index: i, kind, distance: lods[i], detail: { impostor: species.impostor }, branches: null, leaves: null, tris: 0 });
+      levels.push({ index: i, kind, distance: lods[i], detail: { impostor: impostorMode }, branches: null, leaves: null, tris: 0 });
     }
     tris.push(levels[i].tris);
   }
@@ -157,7 +159,7 @@ export function buildVariant(speciesId, index, opts = {}) {
   const impostorLevel = levels.find((l) => l.kind === 'impostor');
   const sets = speciesSets(species);
   if (impostorLevel) {
-    const views = impostorViews(bounds, species.impostor);
+    const views = impostorViews(bounds, impostorMode);
     const geometry = impostorGeometry(views);
     const empty = new THREE.BufferGeometry();
     empty.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
@@ -173,7 +175,7 @@ export function buildVariant(speciesId, index, opts = {}) {
   if (impostor && opts.bakeImpostor && opts.renderer) {
     const baked = bakeImpostor(
       { branches: levels[0].branches, leaves: levels[0].leaves },
-      materials.bark, materials.leaves, opts.renderer, species.impostor);
+      materials.bark, materials.leaves, opts.renderer, impostorMode);
     impostor.geometry.dispose();
     impostor.geometry = impostorLevel.leaves = baked.leaves;
     baked.branches.dispose();
@@ -206,7 +208,7 @@ export function buildVariant(speciesId, index, opts = {}) {
   return {
     species, index, name: meta.name, file: meta.file, options,
     height: bounds.max.y, scale, bounds, tris, lods,
-    impostorMode: species.impostor, sets, wind: speciesWind(species),
+    impostorMode, sets, wind: speciesWind(species),
     levels, impostor, materials, lod,
     dispose() {
       levels.forEach((l) => { l.branches?.dispose(); l.leaves?.dispose(); });
