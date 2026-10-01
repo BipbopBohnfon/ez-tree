@@ -1,0 +1,42 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'pinyon_pine', name: 'Pinyon Pine', biomes: ['high_desert', 'alpine'],
+  height: [4, 8],
+  lods: [25, 60, 130, 350, 1200],
+  lastShadowLod: 1,
+  impostor: 'cross',
+  bark: { texture: 'Bark004', tint: 0xb09a86, textureScale: { x: 1, y: 3 } },
+  leaves: {
+    paint: { shape: 'needle', count: 14, length: 0.16, width: 0.35, spread: 32, branches: 6, colors: [[125, 0.28, 0.2], [140, 0.26, 0.3]], stem: { color: '#4b3a2a', width: 0.012 } },
+    roughness: 0.75,
+  },
+  swayRate: 0.3,
+  options: {
+    type: 'deciduous',
+    branch: {
+      levels: 2,
+      angle: { 1: 62, 2: 45 },
+      children: { 0: 12, 1: 6 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.003 },
+      gnarliness: { 0: 0.1, 1: 0.2, 2: 0.2 },
+      length: { 0: 10, 1: 9, 2: 4 },
+      radius: { 0: 1.8, 1: 0.55, 2: 0.6 },
+      sections: { 0: 10, 1: 6, 2: 4 },
+      segments: { 0: 8, 1: 5, 2: 3 },
+      start: { 1: 0.18, 2: 0.2 },
+      taper: { 0: 0.6, 1: 0.6, 2: 0.7 },
+      droop: { 1: 0.15 },
+    },
+    form: { crownFlatten: 0.9, crownStart: 0.5 },
+    leaves: { billboard: 'double', angle: 35, count: 7, start: 0.15, size: 3.2, sizeVariance: 0.25, alphaTest: 0.5 },
+  },
+  vary: {
+    'branch.length.0': [8, 13],
+    'branch.length.1': [7, 11],
+    'branch.children.0': [9, 14, 'int'],
+    'branch.gnarliness.1': [0.12, 0.3],
+    'form.lean': [0, 10],
+    'form.leanDirection': [0, 360],
+    'form.bend': [-10, 10],
+  },
+};

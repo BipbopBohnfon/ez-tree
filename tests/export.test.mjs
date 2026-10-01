@@ -47,6 +47,47 @@ test('mergeCatalog: re-export keeps slots; new variants append after every slot'
   assert.equal(c.species[0].variants.length, 2);
 });
 
+const plant = (id, files, extra = {}) => ({
+  id, name: id.replace(/(^|_)(\w)/g, (_, s, c) => `${s ? ' ' : ''}${c.toUpperCase()}`), origin: 'glb', size: 'small',
+  biomes: ['marsh'], lods: [10, 25, 50], last_shadow_lod: -1, sets: { leaves: id },
+  variants: files.map((n) => ({ name: `${id} ${n}`, file: `${id}_${n}`, height: 1, tris: [5, 4, 3] })),
+  ...extra,
+});
+
+test('mergeCatalog: a glb species and its slots survive an ez-tree merge, in order', () => {
+  let c = mergeCatalog(null, record('oak', ['01', '02']));
+  c = mergeCatalog(c, plant('reed', ['01', '02']));
+  c = mergeCatalog(c, record('pine', ['01']));
+  assert.deepEqual(slots(c), [['oak_01', 36], ['oak_02', 37], ['reed_01', 38], ['reed_02', 39], ['pine_01', 40]]);
+  const again = mergeCatalog(c, record('oak', ['01', '02', '03']));
+  assert.deepEqual(again.species.map((s) => s.id), ['oak', 'reed', 'pine']);
+  assert.deepEqual(again.species[1], c.species[1], 'the glb species is untouched, origin and size included');
+  assert.equal(again.species[1].origin, 'glb');
+  assert.deepEqual(slots(again), [['oak_01', 36], ['oak_02', 37], ['oak_03', 41], ['reed_01', 38], ['reed_02', 39], ['pine_01', 40]]);
+  assert.match(formatCatalog(again), /"origin": "glb",\n\s+"size": "small"/, 'origin and size are written');
+  assert.deepEqual(JSON.parse(formatCatalog(again)), again, 'and read back');
+});
+
+test('mergeCatalog: an ez-tree export may not replace a glb species, nor a glb one an ez-tree species', () => {
+  const c = mergeCatalog(mergeCatalog(null, record('oak', ['01'])), plant('reed', ['01']));
+  assert.throws(() => mergeCatalog(c, record('reed', ['01'])), /does not own it/);
+  assert.throws(() => mergeCatalog(c, plant('oak', ['01'])), /does not own it/);
+});
+
+test('checkCatalog: glb species rules (size, no impostor, one set suffices, at most four levels)', () => {
+  const ok = mergeCatalog(null, plant('reed', ['01']));
+  assert.doesNotThrow(() => checkCatalog(ok));
+  const broken = (edit) => { const c = structuredClone(ok); edit(c.species[0]); return c; };
+  assert.throws(() => checkCatalog(broken((s) => { delete s.size; })), /size is not/);
+  assert.throws(() => checkCatalog(broken((s) => { s.impostor = 'card'; })), /no impostor/);
+  assert.throws(() => checkCatalog(broken((s) => { s.lods = [1, 2, 3, 4, 5]; })), /lods is not 1\.\.4/);
+  assert.throws(() => checkCatalog(broken((s) => { s.sets = {}; })), /sets are not/);
+  assert.throws(() => checkCatalog(broken((s) => { s.origin = 'blender'; })), /origin/);
+  const tree = mergeCatalog(null, record('oak', ['01']));
+  tree.species[0].size = 'small';
+  assert.throws(() => checkCatalog(tree), /size belongs to a glb species/);
+});
+
 test('mergeCatalog: refuses anything that would move, drop or duplicate a slot', () => {
   const c = mergeCatalog(mergeCatalog(null, record('oak', ['01', '02'])), record('pine', ['01']));
   assert.throws(() => mergeCatalog(c, record('oak', ['01'])), /missing from the export/);

@@ -8,6 +8,10 @@ import maritimePine from './maritime_pine';
 import umbrellaAcacia from './umbrella_acacia';
 import olive from './olive';
 import mesquite from './mesquite';
+import juniper from './juniper';
+import pinyonPine from './pinyon_pine';
+import alder from './alder';
+import baldCypress from './bald_cypress';
 import { speciesVariantOptions, variantInfo } from './model';
 
 export {
@@ -21,6 +25,7 @@ export {
 export const SPECIES = Object.fromEntries([
   fieldOak, silverBirch, beech, norwaySpruce, stonePine,
   weepingWillow, maritimePine, umbrellaAcacia, olive, mesquite,
+  juniper, pinyonPine, alder, baldCypress,
 ].map((species) => [species.id, species]));
 
 /** @returns {import('./model').SpeciesDef} */

@@ -1,0 +1,41 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'bald_cypress', name: 'Bald Cypress', biomes: ['fen', 'lake_shore'],
+  height: [12, 22],
+  lods: [30, 70, 150, 400, 1500],
+  lastShadowLod: 1,
+  impostor: 'card',
+  bark: { texture: 'Bark002', tint: 0xa8785a, textureScale: { x: 1, y: 4 }, saturation: 0.9 },
+  leaves: {
+    paint: { shape: 'needle', count: 20, length: 0.12, width: 0.3, spread: 55, branches: 7, colors: [[88, 0.5, 0.38], [98, 0.48, 0.48]], stem: { color: '#7a5a3a', width: 0.008 } },
+    roughness: 0.7,
+  },
+  swayRate: 0.25,
+  options: {
+    type: 'deciduous',
+    branch: {
+      levels: 2,
+      angle: { 1: 72, 2: 60 },
+      children: { 0: 38, 1: 8 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.002 },
+      gnarliness: { 0: 0.03, 1: 0.08, 2: 0.1 },
+      length: { 0: 40, 1: 14, 2: 4 },
+      radius: { 0: 1.9, 1: 0.4, 2: 0.5 },
+      sections: { 0: 12, 1: 6, 2: 3 },
+      segments: { 0: 8, 1: 4, 2: 3 },
+      start: { 1: 0.2, 2: 0.2 },
+      taper: { 0: 0.85, 1: 0.7, 2: 0.7 },
+      droop: { 1: 0.35 },
+    },
+    leaves: { billboard: 'double', angle: 35, count: 8, start: 0.1, size: 3.4, sizeVariance: 0.2, alphaTest: 0.5 },
+  },
+  vary: {
+    'branch.children.0': [30, 46, 'int'],
+    'branch.length.0': [34, 46],
+    'branch.length.1': [11, 17],
+    'branch.angle.1': [64, 80],
+    'branch.droop.1': [0.2, 0.6],
+    'form.lean': [0, 3],
+    'form.leanDirection': [0, 360],
+  },
+};

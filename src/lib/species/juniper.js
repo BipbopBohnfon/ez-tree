@@ -1,0 +1,43 @@
+/** @type {import('./model').SpeciesDef} */
+export default {
+  id: 'juniper', name: 'Juniper', biomes: ['high_desert', 'scrub'],
+  height: [3, 6],
+  lods: [25, 60, 130, 350, 1200],
+  lastShadowLod: 1,
+  impostor: 'card',
+  bark: { texture: 'Bark012', tint: 0xa89a8a, textureScale: { x: 1, y: 3 }, saturation: 0.6 },
+  leaves: {
+    paint: { shape: 'needle', count: 16, length: 0.12, width: 0.4, spread: 40, branches: 6, colors: [[118, 0.24, 0.27], [132, 0.22, 0.35]], stem: { color: '#5a4a3a', width: 0.01 } },
+    roughness: 0.8,
+  },
+  swayRate: 0.3,
+  stemThin: 0.7,
+  options: {
+    type: 'deciduous',
+    branch: {
+      levels: 3,
+      angle: { 1: 38, 2: 42, 3: 40 },
+      children: { 0: 6, 1: 4, 2: 3 },
+      force: { direction: { x: 0, y: 1, z: 0 }, strength: 0.004 },
+      gnarliness: { 0: 0.18, 1: 0.25, 2: 0.2, 3: 0.12 },
+      length: { 0: 7, 1: 8, 2: 5, 3: 2.5 },
+      radius: { 0: 1.5, 1: 0.6, 2: 0.6, 3: 0.7 },
+      sections: { 0: 7, 1: 6, 2: 4, 3: 2 },
+      segments: { 0: 8, 1: 5, 2: 3, 3: 3 },
+      start: { 1: 0.25, 2: 0.2, 3: 0.15 },
+      taper: { 0: 0.5, 1: 0.6, 2: 0.7, 3: 0.7 },
+      twist: { 0: 0.2, 1: 0.12 },
+    },
+    form: { stems: 3, stemSpread: 20, stemRadius: 0.7, stemVariance: 0.25 },
+    leaves: { billboard: 'double', angle: 40, count: 4, start: 0.1, size: 2.4, sizeVariance: 0.25, alphaTest: 0.5 },
+  },
+  vary: {
+    'form.stems': [1, 4.4, 'int'],
+    'form.stemSpread': [14, 30],
+    'branch.length.0': [5, 9],
+    'branch.length.1': [6, 10],
+    'branch.gnarliness.0': [0.1, 0.3],
+    'form.lean': [0, 8],
+    'form.leanDirection': [0, 360],
+  },
+};

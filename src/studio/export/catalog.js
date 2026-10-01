@@ -6,12 +6,22 @@
 // append-only, never reused or reordered. Re-exporting a variant (same file)
 // keeps its slot; a new variant or species appends. Anything that would move,
 // drop or duplicate a slot throws.
+//
+// Two origins share the catalog. A species without `origin` (or 'ez-tree') is
+// this exporter's: five-level trees with bark and leaves sets. A species with
+// `origin: 'glb'` is written by the game's tools/terrain_assets/export_meshes.py
+// (scatter plants and props): up to four levels, no impostor, one or both of the
+// bark/leaves sets, and a `size` class. This merge keeps a glb species and its
+// slots untouched, and refuses a record that would replace one.
 
 export const CATALOG_VERSION = 1;
 export const FIRST_SLOT = 36;
 export const MAX_LODS = 5;
+export const MAX_GLB_LODS = 4;
+export const ORIGINS = ['ez-tree', 'glb'];
+export const GLB_SIZES = ['small', 'medium', 'large'];
 
-const SPECIES_KEYS = ['id', 'name', 'biomes', 'lods', 'last_shadow_lod', 'impostor', 'sets', 'wind', 'variants'];
+const SPECIES_KEYS = ['id', 'name', 'origin', 'size', 'biomes', 'lods', 'last_shadow_lod', 'impostor', 'sets', 'wind', 'variants'];
 const VARIANT_KEYS = ['slot', 'name', 'file', 'height', 'tris'];
 const SET_ROLES = ['bark', 'leaves', 'impostor'];
 const FILE_SAFE = /^[a-z0-9][a-z0-9_]*$/;
@@ -40,16 +50,23 @@ export function checkCatalog(catalog) {
     ids.add(species.id);
     if (!species.name || names.has(species.name)) fail(`species ${species.id}: name '${species.name}' is missing or taken`);
     names.add(species.name);
+    if (species.origin !== undefined && !ORIGINS.includes(species.origin)) fail(`species ${species.id}: origin '${species.origin}' is not ${ORIGINS.join(' or ')}`);
+    const glb = species.origin === 'glb';
+    if (!glb && species.size !== undefined) fail(`species ${species.id}: size belongs to a glb species`);
+    if (glb && !GLB_SIZES.includes(species.size)) fail(`species ${species.id}: size is not ${GLB_SIZES.join(', ')}`);
     const lods = species.lods;
-    if (!Array.isArray(lods) || lods.length < 1 || lods.length > MAX_LODS) fail(`species ${species.id}: lods is not 1..${MAX_LODS} distances`);
+    const maxLods = glb ? MAX_GLB_LODS : MAX_LODS;
+    if (!Array.isArray(lods) || lods.length < 1 || lods.length > maxLods) fail(`species ${species.id}: lods is not 1..${maxLods} distances`);
     if (!lods.every((d, i) => typeof d === 'number' && d > (i ? lods[i - 1] : 0))) fail(`species ${species.id}: lods do not rise from above 0`);
     const shadow = species.last_shadow_lod;
     if (!Number.isInteger(shadow) || shadow < -1 || shadow >= lods.length) fail(`species ${species.id}: last_shadow_lod out of range`);
-    const impostor = lods.length === MAX_LODS;
+    const impostor = !glb && lods.length === MAX_LODS;
     if (impostor && !['cross', 'card'].includes(species.impostor)) fail(`species ${species.id}: impostor is not cross or card`);
+    if (glb && species.impostor !== undefined) fail(`species ${species.id}: a glb species has no impostor`);
     const roles = Object.keys(species.sets ?? {});
-    if (!species.sets?.bark || !species.sets?.leaves || roles.includes('impostor') !== impostor || roles.some((r) => !SET_ROLES.includes(r))) {
-      fail(`species ${species.id}: sets are not bark, leaves${impostor ? ' and impostor' : ''}`);
+    const needed = glb ? roles.length > 0 : species.sets?.bark && species.sets?.leaves;
+    if (!needed || roles.includes('impostor') !== impostor || roles.some((r) => !SET_ROLES.includes(r))) {
+      fail(`species ${species.id}: sets are not ${glb ? 'bark and/or leaves' : `bark, leaves${impostor ? ' and impostor' : ''}`}`);
     }
     for (const role of roles) {
       const set = species.sets[role];
@@ -110,6 +127,9 @@ export function mergeCatalog(existing, speciesRecord) {
   let nextSlot = FIRST_SLOT + base.species.reduce((n, s) => n + s.variants.length, 0);
   const index = base.species.findIndex((s) => s.id === record.id);
   const previous = index >= 0 ? base.species[index] : null;
+  if (previous && (previous.origin === 'glb') !== (record.origin === 'glb')) {
+    fail(`species ${record.id}: held as origin '${previous.origin ?? 'ez-tree'}', so a '${record.origin ?? 'ez-tree'}' export does not own it`);
+  }
   const known = new Map((previous?.variants ?? []).map((v) => [v.file, v.slot]));
   for (const file of known.keys()) {
     if (!recordFiles.has(file)) fail(`species ${record.id}: variant '${file}' (slot ${known.get(file)}) is missing from the export; slots are never dropped`);

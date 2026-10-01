@@ -8,9 +8,9 @@ import {
 const ids = Object.keys(SPECIES);
 const size = (b) => ({ x: b.max.x - b.min.x, y: b.max.y - b.min.y, z: b.max.z - b.min.z });
 
-test('roster: ten species with catalog fields', () => {
+test('roster: fourteen species with catalog fields', () => {
   assert.deepEqual(ids, ['field_oak', 'silver_birch', 'beech', 'norway_spruce', 'stone_pine',
-    'weeping_willow', 'maritime_pine', 'umbrella_acacia', 'olive', 'mesquite']);
+    'weeping_willow', 'maritime_pine', 'umbrella_acacia', 'olive', 'mesquite', 'juniper', 'pinyon_pine', 'alder', 'bald_cypress']);
   for (const s of Object.values(SPECIES)) {
     assert.ok(s.lods.length >= 1 && s.lods.length <= 5, s.id);
     assert.ok(s.lods.every((d, i) => i === 0 || d > s.lods[i - 1]), `${s.id} lods ascend`);
